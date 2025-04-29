@@ -1,12 +1,5 @@
-module org.whiteboard.client {
-    requires javafx.controls;
-    requires javafx.fxml;
+module org.whiteboard.server {
+    requires org.whiteboard.common;
+    requires java.rmi;
 
-    requires org.controlsfx.controls;
-    requires net.synedra.validatorfx;
-    requires org.kordamp.ikonli.javafx;
-    requires org.kordamp.bootstrapfx.core;
-
-    opens org.whiteboard.client to javafx.fxml;
-    exports org.whiteboard.client;
 }

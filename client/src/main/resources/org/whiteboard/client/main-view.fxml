@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.ColorPicker?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.layout.Pane?>
+
+<Pane fx:id="Main" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="830.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.whiteboard.client.controller.MainController">
+   <children>
+      <MenuBar fx:id="MenuBar" prefHeight="30.0" prefWidth="1200.0">
+        <menus>
+          <Menu fx:id="Menu_File" mnemonicParsing="false" text="File">
+            <items>
+                  <MenuItem fx:id="FIle_New" mnemonicParsing="false" text="New" />
+                  <MenuItem fx:id="FIle_Open" mnemonicParsing="false" text="Open" />
+                  <MenuItem fx:id="FIle_Save" mnemonicParsing="false" text="Save" />
+                  <MenuItem fx:id="FIle_SaveAs" mnemonicParsing="false" text="SaveAs" />
+              <MenuItem fx:id="FIle_Close" mnemonicParsing="false" text="Close" />
+            </items>
+          </Menu>
+            <Menu fx:id="Menu_Color" mnemonicParsing="false" text="Shape">
+              <items>
+                <MenuItem fx:id="Shape_Line" mnemonicParsing="false" text="Line" />
+                  <MenuItem fx:id="Shape_Triangle" mnemonicParsing="false" text="Triangle" />
+                  <MenuItem fx:id="Shape_Oval" mnemonicParsing="false" text="Oval" />
+                  <MenuItem fx:id="Shape_Rectangle" mnemonicParsing="false" text="Rectangle" />
+              </items>
+            </Menu>
+        </menus>
+      </MenuBar>
+      <Canvas fx:id="Canvas" height="800.0" layoutY="28.0" width="1200.0" />
+      <ColorPicker fx:id="ColorPicker" layoutX="26.0" layoutY="785.0" prefHeight="28.0" prefWidth="111.0" />
+   </children>
+</Pane>
