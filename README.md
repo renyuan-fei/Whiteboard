@@ -1,6 +1,7 @@
 # Shared Whiteboard
 
 ## Features
+
 - Basic
   - [x] Draw
   - [x] Erase

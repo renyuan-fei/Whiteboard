@@ -1,7 +1,6 @@
 package org.whiteboard.client;
 
 import javafx.application.Platform;
-import javafx.scene.canvas.GraphicsContext;
 import org.whiteboard.client.controller.CanvasController;
 import org.whiteboard.common.action.Action;
 import org.whiteboard.common.action.DrawAction;
@@ -10,7 +9,6 @@ import org.whiteboard.common.action.TextAction;
 import org.whiteboard.common.rmi.IClientCallback;
 import org.whiteboard.common.rmi.IWhiteboardService;
 
-import java.awt.*;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -18,14 +16,15 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class WhiteboardClient implements IClientCallback {
 
-    private static final String SERVICE_NAME  = "WhiteboardService";
+    private static final String SERVICE_NAME = "WhiteboardService";
     private final IWhiteboardService service;
     private final String username;
 
     /**
      * Create a new client instance.
-     * @param host the host name of the server
-     * @param port the port number of the server
+     *
+     * @param host     the host name of the server
+     * @param port     the port number of the server
      * @param username the username
      * @return a new client instance
      * @throws RemoteException on network error
@@ -77,34 +76,36 @@ public class WhiteboardClient implements IClientCallback {
     public void disconnect() {
         try {
             service.unregisterClient(username);
-        } catch (RemoteException ignored) {}
+        } catch (RemoteException ignored) {
+        }
         try {
             UnicastRemoteObject.unexportObject(this, true);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
     }
 
 
     @Override
     public void onAction(Action action) throws RemoteException {
-        if (action instanceof DrawAction draw) {
-            Platform.runLater(() -> {
+        switch (action) {
+            case DrawAction draw -> Platform.runLater(() -> {
                 CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
                 if (ctrl != null) {
                     ctrl.renderRemoteDrawAction(draw);
                 }
             });
-        } else if (action instanceof EraseAction erase) {
-            // TODO handle erase action
-            Platform.runLater(() -> {
-                CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
-                if (ctrl != null) {
-                    ctrl.renderRemoteEraseAction(erase);
-                }
-            });
-        } else if (action instanceof TextAction text) {
-            // TODO Handle text action
-        } else {
-            System.err.println("Unknown action type: " + action.getClass().getName());
+            case EraseAction erase ->
+                // TODO handle erase action
+                    Platform.runLater(() -> {
+                        CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                        if (ctrl != null) {
+                            ctrl.renderRemoteEraseAction(erase);
+                        }
+                    });
+            case TextAction text -> {
+                // TODO Handle text action
+            }
+            default -> System.err.println("Unknown action type: " + action.getClass().getName());
         }
     }
 
@@ -120,11 +121,12 @@ public class WhiteboardClient implements IClientCallback {
 
     /**
      * Connect to the RMI registry and lookup the service with retry logic.
-     * @param maxRetries maximum number of retries
+     *
+     * @param maxRetries   maximum number of retries
      * @param retryDelayMs initial delay between retries in milliseconds
-     * @param host the host name of the server
-     * @param port the port number of the server
-     * @param serviceName the name of the service
+     * @param host         the host name of the server
+     * @param port         the port number of the server
+     * @param serviceName  the name of the service
      * @return a reference to the IWhiteboardService or null if it fails
      */
     private static IWhiteboardService connectWithRetry(int maxRetries, long retryDelayMs, String host, int port, String serviceName) {

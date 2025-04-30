@@ -19,7 +19,8 @@ public class ConnectionManager {
 
     private CanvasController canvasController;
 
-    private ConnectionManager() { }
+    private ConnectionManager() {
+    }
 
     public static ConnectionManager getInstance() {
         return INSTANCE;
@@ -27,11 +28,12 @@ public class ConnectionManager {
 
     /**
      * Initialize RMI connection.
-     * @param service remote service
-     * @param callback  local callback stub
+     *
+     * @param service  remote service
+     * @param callback local callback stub
      */
     public void init(IWhiteboardService service, IClientCallback callback, String username) {
-        this.service  = service;
+        this.service = service;
         this.callback = callback;
         this.username = username;
     }
@@ -39,6 +41,7 @@ public class ConnectionManager {
     public void setCanvasController(CanvasController controller) {
         this.canvasController = controller;
     }
+
     public CanvasController getCanvasController() {
         return canvasController;
     }

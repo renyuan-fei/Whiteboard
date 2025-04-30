@@ -17,11 +17,11 @@ public final class EraseAction extends Action {
     private final double eraserSize;
 
     /**
-     * @param actionId    unique action id
-     * @param username    creator username
-     * @param timestamp   creation time
-     * @param erasePath   list of points that were erased
-     * @param eraserSize  diameter of the eraser in pixels
+     * @param actionId   unique action id
+     * @param username   creator username
+     * @param timestamp  creation time
+     * @param erasePath  list of points that were erased
+     * @param eraserSize diameter of the eraser in pixels
      */
     public EraseAction(
             long actionId,

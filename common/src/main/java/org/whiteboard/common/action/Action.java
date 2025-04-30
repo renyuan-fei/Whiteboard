@@ -16,8 +16,8 @@ public abstract class Action implements Serializable {
     private final Instant timestamp;
 
     /**
-     * @param actionId unique identifier for this action
-     * @param username the user who generated this action
+     * @param actionId  unique identifier for this action
+     * @param username  the user who generated this action
      * @param timestamp time when the action was created
      */
     public Action(long actionId, String username, Instant timestamp) {

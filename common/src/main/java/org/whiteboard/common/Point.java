@@ -24,6 +24,7 @@ public final class Point implements Serializable {
 
     /**
      * Gets the X coordinate.
+     *
      * @return x
      */
     public double getX() {
@@ -32,6 +33,7 @@ public final class Point implements Serializable {
 
     /**
      * Gets the Y coordinate.
+     *
      * @return y
      */
     public double getY() {
@@ -48,10 +50,9 @@ public final class Point implements Serializable {
         if (this == obj) {
             return true;
         }
-        if (!(obj instanceof Point)) {
+        if (!(obj instanceof Point other)) {
             return false;
         }
-        Point other = (Point) obj;
         return Double.compare(x, other.x) == 0
                 && Double.compare(y, other.y) == 0;
     }
@@ -60,6 +61,6 @@ public final class Point implements Serializable {
     public int hashCode() {
         long bits = Double.doubleToLongBits(x);
         bits = 31 * bits + Double.doubleToLongBits(y);
-        return (int)(bits ^ (bits >>> 32));
+        return (int) (bits ^ (bits >>> 32));
     }
 }

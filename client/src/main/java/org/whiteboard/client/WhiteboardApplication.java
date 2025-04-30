@@ -6,14 +6,13 @@ import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 
 import java.io.IOException;
-import java.rmi.RemoteException;
 import java.util.UUID;
 
 public class WhiteboardApplication extends javafx.application.Application {
     private String USERNAME;
     private String HOST;
     private int PORT;
-    
+
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(WhiteboardApplication.class.getResource("main-view.fxml"));

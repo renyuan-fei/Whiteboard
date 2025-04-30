@@ -2,10 +2,10 @@ package org.whiteboard.client.controller;
 
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Slider;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import org.whiteboard.client.ConnectionManager;
@@ -45,7 +45,7 @@ public class CanvasController {
     // Used for Eraser
     private Point startPoint;
 
-    private enum ToolType { FREEHAND, LINE, RECTANGLE, OVAL, TRIANGLE, ERASER }
+    private enum ToolType {FREEHAND, LINE, RECTANGLE, OVAL, TRIANGLE, ERASER}
 
     private ToolType currentTool = ToolType.FREEHAND;
 
@@ -67,12 +67,12 @@ public class CanvasController {
         choiceBox.setValue("Freehand");
         choiceBox.getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> {
             switch (val) {
-                case "Freehand"   -> currentTool = ToolType.FREEHAND;
-                case "Line"       -> currentTool = ToolType.LINE;
-                case "Rectangle"  -> currentTool = ToolType.RECTANGLE;
-                case "Oval"       -> currentTool = ToolType.OVAL;
-                case "Triangle"   -> currentTool = ToolType.TRIANGLE;
-                case "Eraser"     -> currentTool = ToolType.ERASER;
+                case "Freehand" -> currentTool = ToolType.FREEHAND;
+                case "Line" -> currentTool = ToolType.LINE;
+                case "Rectangle" -> currentTool = ToolType.RECTANGLE;
+                case "Oval" -> currentTool = ToolType.OVAL;
+                case "Triangle" -> currentTool = ToolType.TRIANGLE;
+                case "Eraser" -> currentTool = ToolType.ERASER;
             }
         });
 
@@ -81,14 +81,14 @@ public class CanvasController {
 
         // update line width when slider moves
         slider.valueProperty().addListener((obs, oldVal, newVal) ->
-            gc.setLineWidth(newVal.doubleValue() / 5)
+                gc.setLineWidth(newVal.doubleValue() / 5)
         );
         slider.setValue(5.0);
 
         // drawing handlers
         canvas.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
             startPoint = new Point(e.getX(), e.getY());
-            lastPoint  = startPoint;
+            lastPoint = startPoint;
 
             if (currentTool == ToolType.FREEHAND || currentTool == ToolType.ERASER) {
                 gc.beginPath();
@@ -217,7 +217,10 @@ public class CanvasController {
                 DrawAction.ShapeType.FREEHAND, List.of(p1, p2),
                 color.toString(), width
         );
-        try { connectionManager.drawAction(act); } catch (RemoteException ignored) {}
+        try {
+            connectionManager.drawAction(act);
+        } catch (RemoteException ignored) {
+        }
     }
 
     private void sendErase(Point point, double size) {

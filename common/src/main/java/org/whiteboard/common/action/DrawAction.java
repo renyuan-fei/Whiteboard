@@ -28,13 +28,13 @@ public final class DrawAction extends Action {
     private final double strokeWidth;
 
     /**
-     * @param actionId     unique action id
-     * @param username     creator username
-     * @param timestamp    creation time
-     * @param shapeType    type of shape drawn
-     * @param points       list of points defining the shape
-     * @param color        stroke color in hex (e.g. "#FF0000")
-     * @param strokeWidth  width of the stroke in pixels
+     * @param actionId    unique action id
+     * @param username    creator username
+     * @param timestamp   creation time
+     * @param shapeType   type of shape drawn
+     * @param points      list of points defining the shape
+     * @param color       stroke color in hex (e.g. "#FF0000")
+     * @param strokeWidth width of the stroke in pixels
      */
     public DrawAction(
             long actionId,
