@@ -7,6 +7,7 @@ import javafx.stage.WindowEvent;
 
 import java.io.IOException;
 import java.rmi.RemoteException;
+import java.util.UUID;
 
 public class WhiteboardApplication extends javafx.application.Application {
     private String USERNAME;
@@ -21,8 +22,9 @@ public class WhiteboardApplication extends javafx.application.Application {
         stage.setTitle("White board");
         stage.setScene(scene);
 
+        // TODO dynamic init host, port and username
         stage.addEventHandler(WindowEvent.WINDOW_SHOWN, evt -> {
-            BackgroundWorker.run(HOST, PORT, USERNAME);
+            BackgroundWorker.run("127.0.0.1", 3000, UUID.randomUUID().toString().substring(0, 8));
         });
 
         stage.show();

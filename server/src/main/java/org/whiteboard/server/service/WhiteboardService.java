@@ -16,19 +16,16 @@ public class WhiteboardService extends UnicastRemoteObject implements IWhiteboar
 
     /**
      * Create a new service instance.
+     *
      * @param port the port number of the server
-     * @return a new service instance
      */
-    public static IWhiteboardService CreateService(int port) {
+    public static void CreateService(int port) {
         try {
             Registry registry = LocateRegistry.createRegistry(port);
 
             WhiteboardService service = new WhiteboardService();
 
             registry.rebind("WhiteboardService", service);
-
-            return service;
-
         } catch (RemoteException e) {
             throw new RuntimeException(e);
         }
@@ -59,7 +56,16 @@ public class WhiteboardService extends UnicastRemoteObject implements IWhiteboar
 
     @Override
     public synchronized void broadcastAction(Action action) throws RemoteException {
-        // TODO According to the action type, call the corresponding method for each client
+        System.out.println("Broadcasting action from" + action.getUsername() + " to all clients");
+        for (Map.Entry<String, IClientCallback> entry : clients.entrySet()) {
+            String clientName = entry.getKey();
+            IClientCallback client = entry.getValue();
+
+            if (!clientName.equals(action.getUsername())) {
+                System.out.println("Broadcasting action to client: " + clientName);
+                client.onAction(action);
+            }
+        }
     }
 
     @Override
@@ -75,7 +81,23 @@ public class WhiteboardService extends UnicastRemoteObject implements IWhiteboar
     }
 
     @Override
-    public synchronized void kickUser(String targetUsername) throws RemoteException {
-        // TODO can only be called by the admin
+    public synchronized void kickUser(String username) throws RemoteException {
+        // TODO Only admin can kick users
+        IClientCallback targetClient = clients.get(username);
+        if (targetClient != null) {
+
+            // call disconnect on the target client
+            // disconnect will call unregisterClient
+            targetClient.onKicked();
+
+            // Check if the client has been unregistered
+            if (clients.containsKey(username)) {
+                System.out.println("Kicked user: " + username + " Failed");
+            }
+
+            System.out.println("Kicked user: " + username + " Success");
+        } else {
+            System.out.println("User " + username + " not found");
+        }
     }
 }

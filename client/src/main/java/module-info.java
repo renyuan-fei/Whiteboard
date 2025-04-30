@@ -7,6 +7,7 @@ module org.whiteboard.client {
     requires org.kordamp.bootstrapfx.core;
     requires org.whiteboard.common;
     requires java.rmi;
+    requires java.desktop;
 
     opens org.whiteboard.client to javafx.fxml;
     exports org.whiteboard.client;

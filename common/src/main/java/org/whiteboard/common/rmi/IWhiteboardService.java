@@ -44,8 +44,8 @@ public interface IWhiteboardService extends Remote {
 
     /**
      * Kick a peer out of the session.
-     * @param targetUsername username to be kicked
+     * @param username username to be kicked
      * @throws RemoteException on network error
      */
-    void kickUser(String targetUsername) throws RemoteException;
+    void kickUser(String username) throws RemoteException;
 }

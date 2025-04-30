@@ -11,6 +11,12 @@ import java.rmi.RemoteException;
  */
 public interface IClientCallback extends Remote {
     /**
+     * Invoked when the server is shutting down.
+     * @throws RemoteException on network error
+     */
+    IWhiteboardService getService() throws RemoteException;
+
+    /**
      * Invoked when a new DrawAction arrives.
      * @param action the action to render
      * @throws RemoteException on network error

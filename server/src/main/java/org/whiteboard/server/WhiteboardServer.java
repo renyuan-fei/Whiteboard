@@ -9,6 +9,7 @@ public class WhiteboardServer {
 
         try {
             WhiteboardService.CreateService(PORT);
+            System.out.println("Whiteboard server started on port " + PORT);
         } catch (Exception e) {
             System.err.println("Failed to create service");
         }

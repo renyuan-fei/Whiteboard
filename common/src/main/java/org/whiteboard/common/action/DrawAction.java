@@ -18,7 +18,8 @@ public final class DrawAction extends Action {
         RECTANGLE,
         OVAL,
         TRIANGLE,
-        FREEHAND
+        FREEHAND,
+        ERASER
     }
 
     private final ShapeType shapeType;
@@ -65,6 +66,10 @@ public final class DrawAction extends Action {
 
     public double getStrokeWidth() {
         return strokeWidth;
+    }
+
+    public String getUsername() {
+        return super.getUsername();
     }
 
     @Override

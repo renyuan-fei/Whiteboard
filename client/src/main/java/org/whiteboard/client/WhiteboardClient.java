@@ -1,16 +1,22 @@
 package org.whiteboard.client;
 
+import javafx.application.Platform;
+import javafx.scene.canvas.GraphicsContext;
+import org.whiteboard.client.controller.CanvasController;
 import org.whiteboard.common.action.Action;
 import org.whiteboard.common.action.DrawAction;
+import org.whiteboard.common.action.EraseAction;
+import org.whiteboard.common.action.TextAction;
 import org.whiteboard.common.rmi.IClientCallback;
 import org.whiteboard.common.rmi.IWhiteboardService;
 
+import java.awt.*;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
-public class WhiteboardClient extends UnicastRemoteObject implements IClientCallback {
+public class WhiteboardClient implements IClientCallback {
 
     private static final String SERVICE_NAME  = "WhiteboardService";
     private final IWhiteboardService service;
@@ -28,18 +34,33 @@ public class WhiteboardClient extends UnicastRemoteObject implements IClientCall
         return new WhiteboardClient(host, port, username);
     }
 
-    protected WhiteboardClient(String host, int port ,String username) throws RemoteException {
-        super();
+    /**
+     * Protected constructor contains join logic.
+     *
+     * @param host     the host name of the server
+     * @param port     the port number of the server
+     * @param username the username
+     * @throws RemoteException on network error
+     */
+    protected WhiteboardClient(String host, int port, String username) throws RemoteException {
+        // Export the client object to make it available for remote calls
+        UnicastRemoteObject.exportObject(this, 0);
 
         this.username = username;
 
+        // Connect to the server with retry
+        IWhiteboardService whiteboardService = connectWithRetry(5, 2000, host, port, SERVICE_NAME);
+
+        if (whiteboardService == null) {
+            throw new RemoteException("Could not connect to service");
+        }
+
+        this.service = whiteboardService;
+
         try {
-            service = connectWithRetry(5, 2000, host, port, SERVICE_NAME, username);
-            if (service != null) {
-                service.registerClient(username, this);
-            }
+            service.registerClient(username, this);
         } catch (RemoteException e) {
-            throw new RuntimeException(e);
+            throw new RemoteException("Failed to register callback", e);
         }
     }
 
@@ -65,7 +86,26 @@ public class WhiteboardClient extends UnicastRemoteObject implements IClientCall
 
     @Override
     public void onAction(Action action) throws RemoteException {
-
+        if (action instanceof DrawAction draw) {
+            Platform.runLater(() -> {
+                CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                if (ctrl != null) {
+                    ctrl.renderRemoteDrawAction(draw);
+                }
+            });
+        } else if (action instanceof EraseAction erase) {
+            // TODO handle erase action
+            Platform.runLater(() -> {
+                CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                if (ctrl != null) {
+                    ctrl.renderRemoteEraseAction(erase);
+                }
+            });
+        } else if (action instanceof TextAction text) {
+            // TODO Handle text action
+        } else {
+            System.err.println("Unknown action type: " + action.getClass().getName());
+        }
     }
 
     @Override
@@ -85,10 +125,9 @@ public class WhiteboardClient extends UnicastRemoteObject implements IClientCall
      * @param host the host name of the server
      * @param port the port number of the server
      * @param serviceName the name of the service
-     * @param username the username
      * @return a reference to the IWhiteboardService or null if it fails
      */
-    private static IWhiteboardService connectWithRetry(int maxRetries, long retryDelayMs, String host, int port, String serviceName, String username) {
+    private static IWhiteboardService connectWithRetry(int maxRetries, long retryDelayMs, String host, int port, String serviceName) {
         int attempt = 1;
         while (attempt <= maxRetries) {
             try {
@@ -109,6 +148,7 @@ public class WhiteboardClient extends UnicastRemoteObject implements IClientCall
                     break;
                 }
 
+                retryDelayMs *= 2; // Exponential backoff
                 attempt++;
             }
         }
