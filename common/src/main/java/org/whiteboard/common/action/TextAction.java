@@ -15,6 +15,8 @@ public class TextAction extends Action {
 
     private final Double scale;
 
+    private final String color;
+
     /**
      * @param actionId  unique identifier for this action
      * @param username  the user who generated this action
@@ -23,11 +25,12 @@ public class TextAction extends Action {
      * @param position  position of the text on the whiteboard
      * @param scale     scale of the text
      */
-    public TextAction(long actionId, String username, Instant timestamp, String text, Point position, Double scale) {
+    public TextAction(long actionId, String username, Instant timestamp, String text, Point position, Double scale, String color) {
         super(actionId, username, timestamp);
         this.text = text;
         this.position = position;
         this.scale = scale;
+        this.color = color;
     }
 
     public String getText() {
@@ -40,5 +43,9 @@ public class TextAction extends Action {
 
     public Double getScale() {
         return scale;
+    }
+
+    public String getColor() {
+        return color;
     }
 }

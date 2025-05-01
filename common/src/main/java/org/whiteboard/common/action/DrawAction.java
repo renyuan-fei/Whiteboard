@@ -14,6 +14,7 @@ public final class DrawAction extends Action {
     private static final long serialVersionUID = 1L;
 
     public enum ShapeType {
+        Point,
         LINE,
         RECTANGLE,
         OVAL,

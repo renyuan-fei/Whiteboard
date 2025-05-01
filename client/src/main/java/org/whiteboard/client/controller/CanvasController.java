@@ -1,19 +1,27 @@
 package org.whiteboard.client.controller;
 
 import javafx.fxml.FXML;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import org.whiteboard.client.ConnectionManager;
 import org.whiteboard.common.Point;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
+import org.whiteboard.common.action.TextAction;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class CanvasController {
@@ -23,6 +31,9 @@ public class CanvasController {
 
     @FXML
     private Canvas previewCanvas;
+
+    @FXML
+    private AnchorPane overlayPane;
 
     @FXML
     private ColorPicker colorPicker;
@@ -45,9 +56,25 @@ public class CanvasController {
     // Used for Eraser
     private Point startPoint;
 
-    private enum ToolType {FREEHAND, LINE, RECTANGLE, OVAL, TRIANGLE, ERASER}
+    // Used for split single click and double click
+//    private final PauseTransition clickTimer = new PauseTransition(Duration.millis(100));
+
+    private enum ToolType {FREEHAND, Text, LINE, RECTANGLE, OVAL, TRIANGLE, ERASER}
 
     private ToolType currentTool = ToolType.FREEHAND;
+
+    private static class TextElement {
+        String text;
+        double x, y;
+        Rectangle2D bounds;
+        double scale;
+
+        Color color;
+    }
+
+    private final List<TextElement> texts = new ArrayList<>();
+
+    private TextField editingField;
 
     private final ConnectionManager connectionManager = ConnectionManager.getInstance();
 
@@ -63,11 +90,12 @@ public class CanvasController {
         gc.setLineWidth(slider.getValue());
 
         // initialize choice box
-        choiceBox.getItems().addAll("Freehand", "Line", "Rectangle", "Oval", "Triangle", "Eraser");
+        choiceBox.getItems().addAll("Freehand", "Text", "Line", "Rectangle", "Oval", "Triangle", "Eraser");
         choiceBox.setValue("Freehand");
         choiceBox.getSelectionModel().selectedItemProperty().addListener((obs, old, val) -> {
             switch (val) {
                 case "Freehand" -> currentTool = ToolType.FREEHAND;
+                case "Text" -> currentTool = ToolType.Text;
                 case "Line" -> currentTool = ToolType.LINE;
                 case "Rectangle" -> currentTool = ToolType.RECTANGLE;
                 case "Oval" -> currentTool = ToolType.OVAL;
@@ -85,6 +113,38 @@ public class CanvasController {
         );
         slider.setValue(5.0);
 
+
+        canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
+            Point curr = new Point(e.getX(), e.getY());
+
+            if (currentTool == ToolType.FREEHAND) {
+                gc.setFill(colorPicker.getValue());
+                double size = slider.getValue();
+                gc.fillRect(curr.getX() - size / 2, curr.getY() - size / 2, size, size);
+                sendPoint(curr);
+            } else if (currentTool == ToolType.ERASER) {
+                // Set larger size for eraser
+                double size = slider.getValue() * 5;
+
+                // Clear the area around the current point
+                gc.clearRect(curr.getX() - size / 2, curr.getY() - size / 2, size, size);
+
+                sendErase(curr, size);
+            } else if (currentTool == ToolType.Text) {
+
+                // commit editing field if it exists
+                if (editingField != null) {
+                    commitEditingField();
+                    return;
+                }
+
+                // otherwise, show the text editor
+                if (e.getClickCount() == 1) {
+                    showTextEditor("", e.getX(), e.getY());
+                }
+            }
+        });
+
         // drawing handlers
         canvas.addEventHandler(MouseEvent.MOUSE_PRESSED, e -> {
             startPoint = new Point(e.getX(), e.getY());
@@ -98,6 +158,8 @@ public class CanvasController {
 
         canvas.addEventHandler(MouseEvent.MOUSE_DRAGGED, e -> {
             Point curr = new Point(e.getX(), e.getY());
+            gc.setStroke(colorPicker.getValue());
+            gc.setLineWidth(slider.getValue());
 
             switch (currentTool) {
                 // Real-time drawing
@@ -140,8 +202,6 @@ public class CanvasController {
 
         canvas.addEventHandler(MouseEvent.MOUSE_RELEASED, e -> {
             Point end = new Point(e.getX(), e.getY());
-            gc.setStroke(colorPicker.getValue());
-            gc.setLineWidth(slider.getValue());
 
             switch (currentTool) {
                 case LINE -> {
@@ -178,6 +238,11 @@ public class CanvasController {
         Point end = action.getPoints().getLast();
 
         switch (action.getShapeType()) {
+            case Point -> {
+                // Draw a point
+                System.out.println("Drawing point");
+                gc.fillRect(startPoint.getX(), startPoint.getY(), action.getStrokeWidth(), action.getStrokeWidth());
+            }
             case FREEHAND -> {
                 List<Point> pts = action.getPoints();
                 // At least 2 points are needed to draw a line
@@ -208,6 +273,22 @@ public class CanvasController {
         // Erase point
         Point p = eraseAction.getErasePath().getFirst();
         gc.clearRect(p.getX() - size / 2, p.getY() - size / 2, size, size);
+    }
+
+    private void sendPoint(Point point) {
+        DrawAction act = new DrawAction(
+                0,
+                connectionManager.getUsername(),
+                null,
+                DrawAction.ShapeType.Point,
+                List.of(point),
+                colorPicker.getValue().toString(),
+                slider.getValue()
+        );
+        try {
+            connectionManager.drawAction(act);
+        } catch (RemoteException ignored) {
+        }
     }
 
     // Send a Freehand segment to the server
@@ -282,11 +363,132 @@ public class CanvasController {
         Point a = new Point((x1 + x2) / 2, y1);
         Point b = new Point(x1, y2);
         Point c = new Point(x2, y2);
-        System.out.println("Drawing triangle from " + a + " to " + b + " to " + c);
         gc.strokePolygon(
                 new double[]{a.getX(), b.getX(), c.getX()},
                 new double[]{a.getY(), b.getY(), c.getY()},
                 3
         );
+    }
+
+    private void showTextEditor(String initText, double x, double y) {
+
+        if (editingField != null) {
+            hideTextEditor();
+        }
+
+        editingField = new TextField(initText);
+        editingField.setLayoutX(x);
+        editingField.setLayoutY(y);
+        editingField.setPrefColumnCount(Math.max(10, initText.length()));
+        editingField.setFont(Font.font(slider.getValue() * 4));
+        editingField.setStyle("-fx-text-fill: " + toCssColor(colorPicker.getValue()) + ";");
+
+        overlayPane.getChildren().add(editingField);
+        overlayPane.setMouseTransparent(false);
+        editingField.requestFocus();
+
+        // commit when the user presses enter, click outside, or presses escape
+        editingField.setOnAction(e -> commitEditingField());
+        editingField.focusedProperty().addListener((obs, oldV, has) -> {
+            if (!has) commitEditingField();
+        });
+        editingField.setOnKeyPressed(e -> {
+            if (e.getCode() == KeyCode.ESCAPE) {
+                commitEditingField();
+            }
+        });
+    }
+
+    private String toCssColor(Color c) {
+        return String.format("rgba(%d,%d,%d,%.2f)",
+                (int) (c.getRed() * 255), (int) (c.getGreen() * 255),
+                (int) (c.getBlue() * 255), c.getOpacity());
+    }
+
+    private void hideTextEditor() {
+        if (editingField != null) {
+            overlayPane.getChildren().remove(editingField);
+            editingField = null;
+            overlayPane.setMouseTransparent(true);
+        }
+    }
+
+    private void commitEditingField() {
+        if (editingField == null) return;
+
+        String txt = editingField.getText();
+
+        if (txt != null && !txt.isBlank()) {
+
+            // hide and disable the editing field
+            editingField.setEditable(false);
+            editingField.setVisible(false);
+
+            gc.setFill(colorPicker.getValue());
+
+            // compute text height to align baseline properly
+            double scale = slider.getValue();
+            gc.setFont(new Font(scale * 4));
+            double textHeight = computeTextHeight(txt, gc.getFont());
+
+            double textPositionX = editingField.getLayoutX();
+            double textPositionY = editingField.getLayoutY() + textHeight;
+
+            gc.fillText(txt, textPositionX, textPositionY);
+
+            TextElement te = new TextElement();
+            te.text = txt;
+            te.x = textPositionX;
+            te.y = textPositionY;
+            te.scale = scale;
+            texts.add(te);
+
+            // Send the text action to the server
+            sendTextAction(txt, textPositionX, textPositionY, scale);
+        }
+
+        // Hide the text editor after committing
+        hideTextEditor();
+    }
+
+    private void sendTextAction(String txt, double x, double y, double scale) {
+        TextAction action = new TextAction(
+                0,
+                connectionManager.getUsername(),
+                null,
+                txt,
+                new Point(x, y),
+                scale,
+                colorPicker.getValue().toString()
+        );
+        try {
+            connectionManager.textAction(action);
+        } catch (RemoteException ignored) {
+        }
+    }
+
+    public void renderRemoteTextAction(TextAction textAction) {
+        gc.setFont(new Font(textAction.getScale() * 4));
+        gc.setFill(Color.web(textAction.getColor()));
+        gc.fillText(textAction.getText(), textAction.getPosition().getX(), textAction.getPosition().getY());
+
+        TextElement te = new TextElement();
+        te.text = textAction.getText();
+        te.x = textAction.getPosition().getX();
+        te.y = textAction.getPosition().getY();
+        te.scale = textAction.getScale();
+        texts.add(te);
+    }
+
+    private double computeTextWidth(String txt, Font font) {
+        Text helper = new Text(txt);
+        helper.setFont(font);
+        return helper.getLayoutBounds().getWidth();
+    }
+
+    private double computeTextHeight(String txt, Font font) {
+        Text helper = new Text(txt);
+        helper.setFont(font);
+        return helper.getLayoutBounds().getHeight();
     }
 }

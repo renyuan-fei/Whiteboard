@@ -95,7 +95,6 @@ public class WhiteboardClient implements IClientCallback {
                 }
             });
             case EraseAction erase ->
-                // TODO handle erase action
                     Platform.runLater(() -> {
                         CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
                         if (ctrl != null) {
@@ -103,7 +102,12 @@ public class WhiteboardClient implements IClientCallback {
                         }
                     });
             case TextAction text -> {
-                // TODO Handle text action
+                Platform.runLater(() -> {
+                    CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                    if (ctrl != null) {
+                        ctrl.renderRemoteTextAction(text);
+                    }
+                });
             }
             default -> System.err.println("Unknown action type: " + action.getClass().getName());
         }

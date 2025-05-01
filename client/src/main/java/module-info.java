@@ -8,6 +8,7 @@ module org.whiteboard.client {
     requires org.whiteboard.common;
     requires java.rmi;
     requires java.desktop;
+    requires java.compiler;
 
     opens org.whiteboard.client to javafx.fxml;
     exports org.whiteboard.client;
