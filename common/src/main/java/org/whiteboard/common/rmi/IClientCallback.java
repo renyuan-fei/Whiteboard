@@ -14,7 +14,7 @@ public interface IClientCallback extends Remote {
      *
      * @throws RemoteException on network error
      */
-    IWhiteboardService getService() throws RemoteException;
+    IWhiteboardServer getWhiteboardServer() throws RemoteException;
 
     /**
      * Invoked when a new DrawAction arrives.

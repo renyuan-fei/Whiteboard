@@ -8,7 +8,15 @@ import java.rmi.RemoteException;
 /**
  * Remote interface for Whiteboard services.
  */
-public interface IWhiteboardService extends Remote {
+public interface IWhiteboardServer extends Remote {
+    /**
+     * Broadcast a drawing action to all peers.
+     *
+     * @param action the drawing action
+     * @throws RemoteException on network error
+     */
+    void broadcastAction(Action action) throws RemoteException;
+
     /**
      * Join the whiteboard session.
      *
@@ -16,7 +24,7 @@ public interface IWhiteboardService extends Remote {
      * @param callback client callback stub
      * @throws RemoteException on network error
      */
-    void registerClient(String username, IClientCallback callback) throws RemoteException;
+    void registerClient(boolean isAdmin, String username, IClientCallback callback) throws RemoteException;
 
     /**
      * Leave the whiteboard session.
@@ -25,14 +33,6 @@ public interface IWhiteboardService extends Remote {
      * @throws RemoteException on network error
      */
     void unregisterClient(String username) throws RemoteException;
-
-    /**
-     * Broadcast a drawing action to all peers.
-     *
-     * @param action the drawing action
-     * @throws RemoteException on network error
-     */
-    void broadcastAction(Action action) throws RemoteException;
 
     /**
      * Send chat message.
@@ -50,5 +50,5 @@ public interface IWhiteboardService extends Remote {
      * @param username username to be kicked
      * @throws RemoteException on network error
      */
-    void kickUser(String username) throws RemoteException;
+    void kickUser(String senderName, String username) throws RemoteException;
 }

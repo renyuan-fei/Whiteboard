@@ -14,7 +14,7 @@ public final class DrawAction extends Action {
     private static final long serialVersionUID = 1L;
 
     public enum ShapeType {
-        Point,
+        POINT,
         LINE,
         RECTANGLE,
         OVAL,
@@ -67,10 +67,6 @@ public final class DrawAction extends Action {
 
     public double getStrokeWidth() {
         return strokeWidth;
-    }
-
-    public String getUsername() {
-        return super.getUsername();
     }
 
     @Override

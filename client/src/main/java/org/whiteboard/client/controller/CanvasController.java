@@ -67,9 +67,6 @@ public class CanvasController {
     // Used for Eraser
     private Point startPoint;
 
-    // Used for split single click and double click
-//    private final PauseTransition clickTimer = new PauseTransition(Duration.millis(100));
-
     private enum ToolType {FREEHAND, Text, LINE, RECTANGLE, OVAL, TRIANGLE, ERASER}
 
     private ToolType currentTool = ToolType.FREEHAND;
@@ -349,7 +346,7 @@ public class CanvasController {
         double size = action.getStrokeWidth();
 
         switch (action.getShapeType()) {
-            case Point -> {
+            case POINT -> {
                 // Draw a point
                 gc.fillRect(startPoint.getX() - size / 2, startPoint.getY() - size / 2, action.getStrokeWidth(), action.getStrokeWidth());
             }
@@ -390,14 +387,15 @@ public class CanvasController {
                 0,
                 connectionManager.getUsername(),
                 null,
-                DrawAction.ShapeType.Point,
+                DrawAction.ShapeType.POINT,
                 List.of(point),
                 colorPicker.getValue().toString(),
                 slider.getValue()
         );
         try {
             connectionManager.drawAction(act);
-        } catch (RemoteException ignored) {
+        } catch (RemoteException e) {
+            System.out.println("Failed to send point action: " + e.getMessage());
         }
     }
 
@@ -410,7 +408,8 @@ public class CanvasController {
         );
         try {
             connectionManager.drawAction(act);
-        } catch (RemoteException ignored) {
+        } catch (RemoteException e) {
+            System.out.println("Failed to send draw action: " + e.getMessage());
         }
     }
 
@@ -424,8 +423,8 @@ public class CanvasController {
         );
         try {
             connectionManager.eraseAction(er);
-        } catch (RemoteException ignored) {
-
+        } catch (RemoteException e) {
+            System.out.println("Failed to send erase action: " + e.getMessage());
         }
     }
 
@@ -442,8 +441,8 @@ public class CanvasController {
         );
         try {
             connectionManager.drawAction(act);
-        } catch (RemoteException ignored) {
-
+        } catch (RemoteException e) {
+            System.out.println("Failed to send shape action: " + e.getMessage());
         }
     }
 
@@ -564,16 +563,13 @@ public class CanvasController {
                     new Rectangle2D(
                             textPositionX,
                             textPositionY,
-                            computeTextWidth(scale),
+                            computeTextWidth(txt, scale),
                             textHeight
                     ),
                     scale,
                     colorPicker.getValue()
             );
             textElements.add(textElement);
-
-            // TODO debug remove it when committing
-//            drawBounds(textElement);
 
             // Send the text action to the server
             sendTextAction(textElement);
@@ -595,7 +591,7 @@ public class CanvasController {
             System.out.println("Sending text action " + action);
             connectionManager.textAction(action);
         } catch (RemoteException e) {
-            e.printStackTrace();
+            System.out.println("Failed to send text add action: " + e.getMessage());
         }
     }
 
@@ -610,7 +606,7 @@ public class CanvasController {
         try {
             connectionManager.textAction(action);
         } catch (RemoteException e) {
-            e.printStackTrace();
+            System.out.println("Failed to send text remove action: " + e.getMessage());
         }
     }
 
@@ -634,8 +630,8 @@ public class CanvasController {
         reDrawText();
     }
 
-    private double computeTextWidth(Double scale) {
-        Text helper = new Text("Ay");
+    private double computeTextWidth(String txt, Double scale) {
+        Text helper = new Text(txt);
         helper.setFont(new Font(scale * 4));
         return helper.getLayoutBounds().getWidth();
     }
@@ -668,9 +664,6 @@ public class CanvasController {
             tgc.setFill(Color.web(textElement.color().toString()));
             double textHeight = computeTextHeight(textElement.scale());
             tgc.fillText(textElement.text(), textElement.x(), textElement.y() + textHeight * 0.8);
-
-            // TODO debug remove it when committing
-//            drawBounds(textElement);
         }
     }
 
@@ -679,6 +672,10 @@ public class CanvasController {
         gc.setLineWidth(1);
         gc.setStroke(Color.RED);
         gc.strokeRect(te.bounds().getMinX(), te.bounds().getMinY(), te.bounds().getWidth(), te.bounds().getHeight());
-        gc.fillRect(te.bounds().getMinX(), te.bounds().getMinY(), te.bounds().getWidth(), te.bounds().getHeight());
+    }
+
+    // TODO : implement import canvas
+    public void importCanvas() {
+
     }
 }

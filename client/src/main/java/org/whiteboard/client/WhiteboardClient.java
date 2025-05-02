@@ -7,7 +7,7 @@ import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
 import org.whiteboard.common.rmi.IClientCallback;
-import org.whiteboard.common.rmi.IWhiteboardService;
+import org.whiteboard.common.rmi.IWhiteboardServer;
 
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -16,8 +16,8 @@ import java.rmi.server.UnicastRemoteObject;
 
 public class WhiteboardClient implements IClientCallback {
 
-    private static final String SERVICE_NAME = "WhiteboardService";
-    private final IWhiteboardService service;
+    private static final String SERVICE_NAME = "WhiteboardServer";
+    private final IWhiteboardServer whiteboardServer;
     private final String username;
 
     /**
@@ -30,7 +30,11 @@ public class WhiteboardClient implements IClientCallback {
      * @throws RemoteException on network error
      */
     public static WhiteboardClient createClient(String host, int port, String username) throws RemoteException {
-        return new WhiteboardClient(host, port, username);
+        return new WhiteboardClient(false, host, port, username);
+    }
+
+    public static WhiteboardClient createClient(String host, int port, String username, boolean isAdmin) throws RemoteException {
+        return new WhiteboardClient(isAdmin, host, port, username);
     }
 
     /**
@@ -41,23 +45,23 @@ public class WhiteboardClient implements IClientCallback {
      * @param username the username
      * @throws RemoteException on network error
      */
-    protected WhiteboardClient(String host, int port, String username) throws RemoteException {
+    protected WhiteboardClient(boolean isAdmin, String host, int port, String username) throws RemoteException {
         // Export the client object to make it available for remote calls
         UnicastRemoteObject.exportObject(this, 0);
 
         this.username = username;
 
         // Connect to the server with retry
-        IWhiteboardService whiteboardService = connectWithRetry(5, 2000, host, port, SERVICE_NAME);
+        IWhiteboardServer whiteboardServer = connectWithRetry(5, 2000, host, port, SERVICE_NAME);
 
-        if (whiteboardService == null) {
+        if (whiteboardServer == null) {
             throw new RemoteException("Could not connect to service");
         }
 
-        this.service = whiteboardService;
+        this.whiteboardServer = whiteboardServer;
 
         try {
-            service.registerClient(username, this);
+            this.whiteboardServer.registerClient(isAdmin, username, this);
         } catch (RemoteException e) {
             throw new RemoteException("Failed to register callback", e);
         }
@@ -66,8 +70,8 @@ public class WhiteboardClient implements IClientCallback {
     /**
      * Getter for the remote service stub
      */
-    public IWhiteboardService getService() {
-        return service;
+    public IWhiteboardServer getWhiteboardServer() {
+        return whiteboardServer;
     }
 
     /**
@@ -75,20 +79,24 @@ public class WhiteboardClient implements IClientCallback {
      */
     public void disconnect() {
         try {
-            service.unregisterClient(username);
-        } catch (RemoteException ignored) {
-        }
-        try {
-            UnicastRemoteObject.unexportObject(this, true);
-        } catch (Exception ignored) {
+            whiteboardServer.unregisterClient(username);
+        } catch (RemoteException e) {
+            System.err.println("Failed to unregister client: " + e.getMessage());
+        } finally {
+
+            // Unexport the object
+            try {
+                UnicastRemoteObject.unexportObject(this, true);
+            } catch (Exception e) {
+                System.err.println("Failed to unexport client: " + e.getMessage());
+            }
+
         }
     }
 
 
     @Override
     public void onAction(Action action) throws RemoteException {
-        // TODO debug remove it
-        System.out.println("Received action in WhiteboardClient: " + action);
         switch (action) {
             case DrawAction draw -> Platform.runLater(() -> {
                 CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
@@ -106,7 +114,6 @@ public class WhiteboardClient implements IClientCallback {
             case TextAction text -> {
                 Platform.runLater(() -> {
                     CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
-                    System.out.println("Text action received: " + text);
                     if (ctrl != null) {
                         if (text.getType() == TextAction.TextType.ADD) {
                             ctrl.renderRemoteTextAction(text);
@@ -140,14 +147,14 @@ public class WhiteboardClient implements IClientCallback {
      * @param serviceName  the name of the service
      * @return a reference to the IWhiteboardService or null if it fails
      */
-    private static IWhiteboardService connectWithRetry(int maxRetries, long retryDelayMs, String host, int port, String serviceName) {
+    private static IWhiteboardServer connectWithRetry(int maxRetries, long retryDelayMs, String host, int port, String serviceName) {
         int attempt = 1;
         while (attempt <= maxRetries) {
             try {
                 // Try to get the registry and lookup the service
                 Registry registry = LocateRegistry.getRegistry(host, port);
 
-                return (IWhiteboardService) registry.lookup(serviceName);
+                return (IWhiteboardServer) registry.lookup(serviceName);
 
             } catch (Exception ex) {
                 System.err.format("Attempt %d failed: %s%n", attempt, ex.getMessage());

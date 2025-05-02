@@ -2,7 +2,7 @@ package org.whiteboard.client;
 
 import javafx.concurrent.Task;
 import org.whiteboard.common.rmi.IClientCallback;
-import org.whiteboard.common.rmi.IWhiteboardService;
+import org.whiteboard.common.rmi.IWhiteboardServer;
 
 public class BackgroundWorker {
     public static void run(String HOST, int PORT, String USERNAME) {
@@ -13,10 +13,10 @@ public class BackgroundWorker {
                 System.out.println("Starting RMI client in background...");
 
                 IClientCallback callback = WhiteboardClient.createClient(HOST, PORT, USERNAME);
-                IWhiteboardService service = callback.getService();
+                IWhiteboardServer whiteboardServer = callback.getWhiteboardServer();
 
-                // Initialize the connection manager with the service and callback
-                ConnectionManager.getInstance().init(service, callback, USERNAME);
+                // Initialize the connection manager with the whiteboardServer and callback
+                ConnectionManager.getInstance().init(whiteboardServer, callback, USERNAME);
 
                 System.out.println("RMI client started.");
                 return null;

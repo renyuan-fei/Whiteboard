@@ -8,6 +8,7 @@
   - [x] Color
   - [x] Shape (Line, Triangle, Rectangle, Oval)
   - [x] Text
+  - [ ] store canvas and load when user joins
   - [ ] Manager can decide who can join(alter admin after new connection)
   - [ ] User list
   - [ ] Left
