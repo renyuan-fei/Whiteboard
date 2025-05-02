@@ -87,6 +87,8 @@ public class WhiteboardClient implements IClientCallback {
 
     @Override
     public void onAction(Action action) throws RemoteException {
+        // TODO debug remove it
+        System.out.println("Received action in WhiteboardClient: " + action);
         switch (action) {
             case DrawAction draw -> Platform.runLater(() -> {
                 CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
@@ -104,8 +106,13 @@ public class WhiteboardClient implements IClientCallback {
             case TextAction text -> {
                 Platform.runLater(() -> {
                     CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                    System.out.println("Text action received: " + text);
                     if (ctrl != null) {
-                        ctrl.renderRemoteTextAction(text);
+                        if (text.getType() == TextAction.TextType.ADD) {
+                            ctrl.renderRemoteTextAction(text);
+                        } else if (text.getType() == TextAction.TextType.REMOVE) {
+                            ctrl.renderRemoteRemoveTextActions(text);
+                        }
                     }
                 });
             }

@@ -7,7 +7,7 @@
   - [x] Erase
   - [x] Color
   - [x] Shape (Line, Triangle, Rectangle, Oval)
-  - [ ] Text
+  - [x] Text
   - [ ] Manager can decide who can join(alter admin after new connection)
   - [ ] User list
   - [ ] Left

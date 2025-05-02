@@ -67,6 +67,7 @@ public class ConnectionManager {
     }
 
     public void textAction(TextAction action) throws RemoteException {
+        System.out.println("Text action received in Connection manager: " + action);
         service.broadcastAction(action);
     }
 

@@ -4,4 +4,6 @@ module org.whiteboard.common {
     exports org.whiteboard.common;
     requires com.google.gson;
     requires java.rmi;
+    requires java.desktop;
+    requires javafx.graphics;
 }

@@ -10,6 +10,7 @@
       prefWidth="1200.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="org.whiteboard.client.controller.CanvasController">
     <Canvas fx:id="canvas" height="800.0" width="1200.0"/>
+    <Canvas fx:id="textCanvas" height="800.0" width="1200.0" mouseTransparent="true"/>
     <Canvas fx:id="previewCanvas" height="800.0" width="1200.0" mouseTransparent="true"/>
     <AnchorPane fx:id="overlayPane" pickOnBounds="false" mouseTransparent="true"/>
     <ColorPicker fx:id="colorPicker" layoutX="192.0" layoutY="757.0" prefHeight="28.0" prefWidth="111.0"/>

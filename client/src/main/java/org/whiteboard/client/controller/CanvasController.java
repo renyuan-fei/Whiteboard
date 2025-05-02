@@ -1,7 +1,10 @@
 package org.whiteboard.client.controller;
 
 import javafx.fxml.FXML;
+import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
+import javafx.scene.Cursor;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ChoiceBox;
@@ -14,8 +17,10 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextBoundsType;
 import org.whiteboard.client.ConnectionManager;
 import org.whiteboard.common.Point;
+import org.whiteboard.common.TextElement;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
@@ -28,6 +33,9 @@ public class CanvasController {
 
     @FXML
     private Canvas canvas;
+
+    @FXML
+    private Canvas textCanvas;
 
     @FXML
     private Canvas previewCanvas;
@@ -50,6 +58,9 @@ public class CanvasController {
     // Graphics context for drawing on the preview canvas
     private GraphicsContext pgc;
 
+    // Graphics context for drawing on the text canvas
+    private GraphicsContext tgc;
+
     // Used for freehand drawing and shape creation
     private Point lastPoint;
 
@@ -63,16 +74,7 @@ public class CanvasController {
 
     private ToolType currentTool = ToolType.FREEHAND;
 
-    private static class TextElement {
-        String text;
-        double x, y;
-        Rectangle2D bounds;
-        double scale;
-
-        Color color;
-    }
-
-    private final List<TextElement> texts = new ArrayList<>();
+    private final List<TextElement> textElements = new ArrayList<>();
 
     private TextField editingField;
 
@@ -80,10 +82,12 @@ public class CanvasController {
 
     @FXML
     public void initialize() {
+        // inject the canvas controller into the connection manager
         ConnectionManager.getInstance().setCanvasController(this);
 
         // setup canvas
         gc = canvas.getGraphicsContext2D();
+        tgc = textCanvas.getGraphicsContext2D();
         pgc = previewCanvas.getGraphicsContext2D();
         colorPicker.setValue(Color.BLACK);
         gc.setStroke(colorPicker.getValue());
@@ -113,21 +117,104 @@ public class CanvasController {
         );
         slider.setValue(5.0);
 
+        // Mouse
 
+        // hide the cursor in init
+        canvas.setCursor(Cursor.NONE);
+
+        // hide cursor when mouse is over the canvas
+        canvas.addEventHandler(MouseEvent.MOUSE_ENTERED, e ->
+                canvas.setCursor(Cursor.NONE)
+        );
+
+        // show cursor when mouse exits the canvas
+        canvas.addEventHandler(MouseEvent.MOUSE_EXITED, e ->
+                canvas.setCursor(Cursor.DEFAULT)
+        );
+
+        // preview with custom cursor
+        canvas.addEventHandler(MouseEvent.MOUSE_MOVED, e -> {
+            pgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+            double size = slider.getValue();
+
+            if (currentTool == ToolType.FREEHAND
+                    || currentTool == ToolType.LINE
+                    || currentTool == ToolType.RECTANGLE
+                    || currentTool == ToolType.OVAL
+                    || currentTool == ToolType.TRIANGLE) {
+                // preview color and size
+                pgc.setFill(colorPicker.getValue());
+                pgc.fillRect(
+                        e.getX() - size / 2,
+                        e.getY() - size / 2,
+                        size,
+                        size
+                );
+            } else if (currentTool == ToolType.ERASER) {
+                pgc.setLineWidth(1);
+                pgc.strokeRect(
+                        e.getX() - size / 2,
+                        e.getY() - size / 2,
+                        size,
+                        size
+                );
+            } else if (currentTool == ToolType.Text) {
+                // calculate text height
+                double fontSize = slider.getValue() * 4;
+                Font font = Font.font(fontSize);
+                Text helper = new Text("Ay");
+                helper.setFont(font);
+                Bounds lb = helper.getLayoutBounds();
+                double ascent = lb.getMinY() / 2;
+
+                // get the baseline
+                double baselineX = e.getX();
+                double baselineY = e.getY();
+
+                // calculate the top and bottom of the position of y
+                double topY = baselineY - ascent;
+                double bottomY = baselineY + ascent;
+
+                pgc.setStroke(colorPicker.getValue());
+                pgc.setLineWidth(1);
+                pgc.strokeLine(baselineX, topY, baselineX, bottomY);
+            }
+
+        });
+
+        canvas.addEventHandler(MouseEvent.MOUSE_EXITED, e -> {
+            pgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        });
+
+
+        // Canvas
         canvas.addEventHandler(MouseEvent.MOUSE_CLICKED, e -> {
             Point curr = new Point(e.getX(), e.getY());
 
             if (currentTool == ToolType.FREEHAND) {
+
                 gc.setFill(colorPicker.getValue());
                 double size = slider.getValue();
                 gc.fillRect(curr.getX() - size / 2, curr.getY() - size / 2, size, size);
                 sendPoint(curr);
+
             } else if (currentTool == ToolType.ERASER) {
                 // Set larger size for eraser
-                double size = slider.getValue() * 5;
+                double size = slider.getValue();
 
                 // Clear the area around the current point
-                gc.clearRect(curr.getX() - size / 2, curr.getY() - size / 2, size, size);
+                gc.clearRect(
+                        curr.getX() - size / 2,
+                        curr.getY() - size / 2,
+                        size,
+                        size);
+
+                TextElement text = hitText(curr.getX(), curr.getY());
+                if (text != null) {
+                    textElements.remove(text);
+                    sendRemoveTextAction(text);
+                    reDrawText();
+                }
 
                 sendErase(curr, size);
             } else if (currentTool == ToolType.Text) {
@@ -164,18 +251,41 @@ public class CanvasController {
             switch (currentTool) {
                 // Real-time drawing
                 case FREEHAND -> {
-                    gc.lineTo(curr.getX(), curr.getY());
-                    gc.stroke();
-                    sendSegment(lastPoint, curr, colorPicker.getValue(), slider.getValue());
-                }
+                    double size = slider.getValue();
 
-                // Real-time preview in local canvas
+                    gc.strokeLine(lastPoint.getX(), lastPoint.getY(), curr.getX(), curr.getY());
+
+                    sendSegment(lastPoint, curr, colorPicker.getValue(), slider.getValue());
+
+                }
                 case ERASER -> {
+
                     // Set larger size for eraser
-                    double size = slider.getValue() * 5;
+                    double size = slider.getValue();
+
+                    // Real-time preview in local canvas
+                    pgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+//                    pgc.setLineWidth(size);
+                    pgc.strokeRect(
+                            curr.getX() - size / 2,
+                            curr.getY() - size / 2,
+                            size,
+                            size
+                    );
 
                     // Clear the area around the current point
-                    gc.clearRect(curr.getX() - size / 2, curr.getY() - size / 2, size, size);
+                    gc.clearRect(
+                            curr.getX() - size / 2,
+                            curr.getY() - size / 2,
+                            size,
+                            size);
+
+                    TextElement text = hitText(curr.getX(), curr.getY());
+                    if (text != null) {
+                        textElements.remove(text);
+                        sendRemoveTextAction(text);
+                        reDrawText();
+                    }
 
                     sendErase(curr, size);
                 }
@@ -236,12 +346,12 @@ public class CanvasController {
 
         Point startPoint = action.getPoints().getFirst();
         Point end = action.getPoints().getLast();
+        double size = action.getStrokeWidth();
 
         switch (action.getShapeType()) {
             case Point -> {
                 // Draw a point
-                System.out.println("Drawing point");
-                gc.fillRect(startPoint.getX(), startPoint.getY(), action.getStrokeWidth(), action.getStrokeWidth());
+                gc.fillRect(startPoint.getX() - size / 2, startPoint.getY() - size / 2, action.getStrokeWidth(), action.getStrokeWidth());
             }
             case FREEHAND -> {
                 List<Point> pts = action.getPoints();
@@ -377,11 +487,18 @@ public class CanvasController {
         }
 
         editingField = new TextField(initText);
+
+        double fontHeight = computeTextHeight(slider.getValue());
+
+        // agile the text field and cursor
         editingField.setLayoutX(x);
-        editingField.setLayoutY(y);
+        editingField.setLayoutY(y - fontHeight / 2);
+
+
         editingField.setPrefColumnCount(Math.max(10, initText.length()));
         editingField.setFont(Font.font(slider.getValue() * 4));
-        editingField.setStyle("-fx-text-fill: " + toCssColor(colorPicker.getValue()) + ";");
+        editingField.setPadding(new Insets(0));
+        editingField.setStyle("-fx-text-fill: " + toCssColor(colorPicker.getValue()) + "; -fx-padding: 0;");
 
         overlayPane.getChildren().add(editingField);
         overlayPane.setMouseTransparent(false);
@@ -424,71 +541,144 @@ public class CanvasController {
             editingField.setEditable(false);
             editingField.setVisible(false);
 
-            gc.setFill(colorPicker.getValue());
+            tgc.setFill(colorPicker.getValue());
 
             // compute text height to align baseline properly
             double scale = slider.getValue();
-            gc.setFont(new Font(scale * 4));
-            double textHeight = computeTextHeight(txt, gc.getFont());
+            tgc.setFont(new Font(scale * 4));
+            double textHeight = computeTextHeight(scale);
 
             double textPositionX = editingField.getLayoutX();
-            double textPositionY = editingField.getLayoutY() + textHeight;
+            double textPositionY = editingField.getLayoutY();
+            System.out.println(textPositionX + ", " + textPositionY + " " + textHeight);
+            System.out.println("Text position: " + textPositionX + ", " + textPositionY + textHeight * 0.8);
 
-            gc.fillText(txt, textPositionX, textPositionY);
+            // agile the text position
+            tgc.fillText(txt, textPositionX, textPositionY + textHeight * 0.8);
 
-            TextElement te = new TextElement();
-            te.text = txt;
-            te.x = textPositionX;
-            te.y = textPositionY;
-            te.scale = scale;
-            texts.add(te);
+            // add the text element to the list
+            TextElement textElement = new TextElement(
+                    txt,
+                    textPositionX,
+                    textPositionY,
+                    new Rectangle2D(
+                            textPositionX,
+                            textPositionY,
+                            computeTextWidth(scale),
+                            textHeight
+                    ),
+                    scale,
+                    colorPicker.getValue()
+            );
+            textElements.add(textElement);
+
+            // TODO debug remove it when committing
+//            drawBounds(textElement);
 
             // Send the text action to the server
-            sendTextAction(txt, textPositionX, textPositionY, scale);
+            sendTextAction(textElement);
         }
 
         // Hide the text editor after committing
         hideTextEditor();
     }
 
-    private void sendTextAction(String txt, double x, double y, double scale) {
+    private void sendTextAction(TextElement textElement) {
         TextAction action = new TextAction(
                 0,
                 connectionManager.getUsername(),
                 null,
-                txt,
-                new Point(x, y),
-                scale,
-                colorPicker.getValue().toString()
+                TextAction.TextType.ADD,
+                textElement
+        );
+        try {
+            System.out.println("Sending text action " + action);
+            connectionManager.textAction(action);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendRemoveTextAction(TextElement textElement) {
+        TextAction action = new TextAction(
+                0,
+                connectionManager.getUsername(),
+                null,
+                TextAction.TextType.REMOVE,
+                textElement
         );
         try {
             connectionManager.textAction(action);
-        } catch (RemoteException ignored) {
+        } catch (RemoteException e) {
+            e.printStackTrace();
         }
     }
 
     public void renderRemoteTextAction(TextAction textAction) {
-        gc.setFont(new Font(textAction.getScale() * 4));
-        gc.setFill(Color.web(textAction.getColor()));
-        gc.fillText(textAction.getText(), textAction.getPosition().getX(), textAction.getPosition().getY());
+        tgc.setFill(Color.web(textAction.getColor()));
+        tgc.setFont(new Font(textAction.getScale() * 4));
+        double textHeight = computeTextHeight(textAction.getScale());
+        System.out.println(textAction.getPosition().getX() + ", " + textAction.getPosition().getY() + " " + textHeight);
+        System.out.println("Rendering text action " + textAction + " at " + textAction.getPosition().getX() + ", " + textAction.getPosition().getY() + textHeight * 0.8);
+        tgc.fillText(textAction.getText(), textAction.getPosition().getX(), textAction.getPosition().getY() + textHeight * 0.8);
 
-        TextElement te = new TextElement();
-        te.text = textAction.getText();
-        te.x = textAction.getPosition().getX();
-        te.y = textAction.getPosition().getY();
-        te.scale = textAction.getScale();
-        texts.add(te);
+        // add the text element to the list
+        TextElement textElement = textAction.getTextElement();
+        System.out.println("Adding text element " + textElement);
+        textElements.add(textElement);
     }
 
-    private double computeTextWidth(String txt, Font font) {
-        Text helper = new Text(txt);
-        helper.setFont(font);
+    public void renderRemoteRemoveTextActions(TextAction textActions) {
+        System.out.println("Removing text element " + textActions.getTextElement());
+        textElements.remove(textActions.getTextElement());
+        reDrawText();
+    }
+
+    private double computeTextWidth(Double scale) {
+        Text helper = new Text("Ay");
+        helper.setFont(new Font(scale * 4));
         return helper.getLayoutBounds().getWidth();
     }
 
-    private double computeTextHeight(String txt, Font font) {
-        Text helper = new Text(txt);
-        helper.setFont(font);
+    private double computeTextHeight(Double scale) {
+        Text helper = new Text("Ay");
+        helper.setFont(new Font(scale * 4));
+        helper.setBoundsType(TextBoundsType.LOGICAL);
+
+        System.out.println("Text height: " + helper.fontProperty().get().getSize());
+        System.out.println("Text height: " + helper.getLayoutBounds());
         return helper.getLayoutBounds().getHeight();
+    }
+
+    private TextElement hitText(double x, double y) {
+        for (int i = textElements.size() - 1; i >= 0; i--) {
+            TextElement t = textElements.get(i);
+            if (t.bounds().contains(x, y)) {
+                System.out.println("Hit text at " + t.x() + ", " + t.y());
+                return t;
+            }
+        }
+        return null;
+    }
+
+    private void reDrawText() {
+        tgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+        for (TextElement textElement : textElements) {
+            tgc.setFont(new Font(textElement.scale() * 4));
+            tgc.setFill(Color.web(textElement.color().toString()));
+            double textHeight = computeTextHeight(textElement.scale());
+            tgc.fillText(textElement.text(), textElement.x(), textElement.y() + textHeight * 0.8);
+
+            // TODO debug remove it when committing
+//            drawBounds(textElement);
+        }
+    }
+
+
+    private void drawBounds(TextElement te) {
+        gc.setLineWidth(1);
+        gc.setStroke(Color.RED);
+        gc.strokeRect(te.bounds().getMinX(), te.bounds().getMinY(), te.bounds().getWidth(), te.bounds().getHeight());
+        gc.fillRect(te.bounds().getMinX(), te.bounds().getMinY(), te.bounds().getWidth(), te.bounds().getHeight());
     }
 }
