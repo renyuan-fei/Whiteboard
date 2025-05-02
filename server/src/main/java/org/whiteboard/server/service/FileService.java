@@ -58,4 +58,10 @@ public class FileService extends Service {
     public void exportPNG() {
 
     }
+
+    public void shutdown() {
+        System.out.println("Shutting down FileService...");
+        System.out.println("FileService shut down.");
+    }
+
 }

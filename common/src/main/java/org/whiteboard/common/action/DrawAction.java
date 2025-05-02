@@ -13,6 +13,7 @@ public final class DrawAction extends Action {
     @Serial
     private static final long serialVersionUID = 1L;
 
+
     public enum ShapeType {
         POINT,
         LINE,
@@ -78,5 +79,10 @@ public final class DrawAction extends Action {
                 color,
                 strokeWidth
         );
+    }
+
+    @Override
+    public String getType() {
+        return "Action.Draw";
     }
 }

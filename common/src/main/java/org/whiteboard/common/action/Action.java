@@ -1,5 +1,7 @@
 package org.whiteboard.common.action;
 
+import org.whiteboard.common.event.IEvent;
+
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
@@ -7,7 +9,7 @@ import java.time.Instant;
 /**
  * Base class for all whiteboard actions.
  */
-public abstract class Action implements Serializable {
+public abstract class Action implements Serializable, IEvent {
     @Serial
     private static final long serialVersionUID = 1L;
 

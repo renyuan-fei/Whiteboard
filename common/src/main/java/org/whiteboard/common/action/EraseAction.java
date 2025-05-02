@@ -51,4 +51,9 @@ public final class EraseAction extends Action {
                 eraserSize
         );
     }
+
+    @Override
+    public String getType() {
+        return "Action.Erase";
+    }
 }

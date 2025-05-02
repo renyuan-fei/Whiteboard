@@ -101,7 +101,7 @@ public class TextAction extends Action {
                 Color.web(color));
     }
 
-    public TextType getType() {
+    public TextType getTextType() {
         return type;
     }
 
@@ -115,5 +115,10 @@ public class TextAction extends Action {
                 scale,
                 color
         );
+    }
+
+    @Override
+    public String getType() {
+        return "Action.Text";
     }
 }

@@ -27,7 +27,6 @@ public class WhiteboardClient implements IClientCallback {
      * @param port     the port number of the server
      * @param username the username
      * @return a new client instance
-     * @throws RemoteException on network error
      */
     public static WhiteboardClient createClient(String host, int port, String username) throws RemoteException {
         return new WhiteboardClient(false, host, port, username);
@@ -43,7 +42,6 @@ public class WhiteboardClient implements IClientCallback {
      * @param host     the host name of the server
      * @param port     the port number of the server
      * @param username the username
-     * @throws RemoteException on network error
      */
     protected WhiteboardClient(boolean isAdmin, String host, int port, String username) throws RemoteException {
         // Export the client object to make it available for remote calls
@@ -74,6 +72,7 @@ public class WhiteboardClient implements IClientCallback {
         return whiteboardServer;
     }
 
+
     /**
      * Disconnect from the server and unregister the client.
      */
@@ -81,14 +80,14 @@ public class WhiteboardClient implements IClientCallback {
         try {
             whiteboardServer.unregisterClient(username);
         } catch (RemoteException e) {
-            System.err.println("Failed to unregister client: " + e.getMessage());
+            System.err.println("Error: Failed to unregister client: " + e.getMessage());
         } finally {
 
             // Unexport the object
             try {
                 UnicastRemoteObject.unexportObject(this, true);
             } catch (Exception e) {
-                System.err.println("Failed to unexport client: " + e.getMessage());
+                System.err.println("Error: Failed to unexport client: " + e.getMessage());
             }
 
         }
@@ -115,15 +114,15 @@ public class WhiteboardClient implements IClientCallback {
                 Platform.runLater(() -> {
                     CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
                     if (ctrl != null) {
-                        if (text.getType() == TextAction.TextType.ADD) {
+                        if (text.getTextType() == TextAction.TextType.ADD) {
                             ctrl.renderRemoteTextAction(text);
-                        } else if (text.getType() == TextAction.TextType.REMOVE) {
+                        } else if (text.getTextType() == TextAction.TextType.REMOVE) {
                             ctrl.renderRemoteRemoveTextActions(text);
                         }
                     }
                 });
             }
-            default -> System.err.println("Unknown action type: " + action.getClass().getName());
+            default -> System.err.println("Error: Unknown action type: " + action.getClass().getName());
         }
     }
 
@@ -137,6 +136,29 @@ public class WhiteboardClient implements IClientCallback {
         disconnect();
     }
 
+    @Override
+    public void onServerShutdown(String reason) throws RemoteException {
+        System.out.println("Received server shutdown notification: " + reason);
+        // Trigger client-side cleanup, similar to disconnect but without calling server
+        cleanupLocalResources();
+    }
+
+    /**
+     * Performs local resource cleanup without contacting the server.
+     */
+    private void cleanupLocalResources() {
+        System.out.println("Cleaning up local client resources for: " + username);
+
+        // Unexport the RMI object
+        try {
+            UnicastRemoteObject.unexportObject(this, true);
+            System.out.println("Successfully unexported client callback object.");
+        } catch (Exception e) {
+            System.err.println("Error during client callback unexport: " + e.getMessage());
+        }
+    }
+
+
     /**
      * Connect to the RMI registry and lookup the service with retry logic.
      *
@@ -145,7 +167,6 @@ public class WhiteboardClient implements IClientCallback {
      * @param host         the host name of the server
      * @param port         the port number of the server
      * @param serviceName  the name of the service
-     * @return a reference to the IWhiteboardService or null if it fails
      */
     private static IWhiteboardServer connectWithRetry(int maxRetries, long retryDelayMs, String host, int port, String serviceName) {
         int attempt = 1;
@@ -153,8 +174,8 @@ public class WhiteboardClient implements IClientCallback {
             try {
                 // Try to get the registry and lookup the service
                 Registry registry = LocateRegistry.getRegistry(host, port);
-
-                return (IWhiteboardServer) registry.lookup(serviceName);
+                IWhiteboardServer server = (IWhiteboardServer) registry.lookup(serviceName);
+                return server;
 
             } catch (Exception ex) {
                 System.err.format("Attempt %d failed: %s%n", attempt, ex.getMessage());

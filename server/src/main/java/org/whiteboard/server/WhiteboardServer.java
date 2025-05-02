@@ -7,28 +7,34 @@ import org.whiteboard.server.service.FileService;
 import org.whiteboard.server.service.UserService;
 import org.whiteboard.server.service.WhiteboardService;
 
+import java.rmi.NoSuchObjectException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboardServer {
 
     private final WhiteboardService whiteboardService;
     private final FileService fileService;
     private final UserService userService;
+    private transient Registry registry;
 
-    private final Map<String, IClientCallback> clients = new ConcurrentHashMap<>();
 
     /**
-     * Create a new server instance.
+     * Factory method to create and register a new server instance.
      *
      * @param port the port number of the server
+     * @param whiteboardService the whiteboard service
+     * @param fileService       the file service
+     * @param userService       the user service
+     * @throws RuntimeException if server creation fails.
      */
-    public static void CreateServer(
+    public static WhiteboardServer CreateServer(
             int port,
             WhiteboardService whiteboardService,
             FileService fileService,
@@ -38,28 +44,59 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
             Registry registry = LocateRegistry.createRegistry(port);
 
             WhiteboardServer server = new WhiteboardServer(
+                    registry,
                     whiteboardService,
                     fileService,
                     userService
             );
 
             registry.rebind("WhiteboardServer", server);
-        } catch (RemoteException e) {
-            throw new RuntimeException(e);
+
+            System.out.println("WhiteboardServer bound to registry on port " + port);
+            return server;
+
+        } catch (RemoteException ex) {
+            System.err.println("FATAL: Failed to create or bind server: " + ex.getMessage());
+            throw new RuntimeException(ex);
         }
     }
 
+    /**
+     * Constructor for the server.
+     *
+     * @param registry          RMI registry instance
+     * @param whiteboardService the whiteboard service
+     * @param fileService       the file service
+     * @param userService       the user service
+     * @throws RemoteException if an error occurs during remote object creation
+     */
+    protected WhiteboardServer(
+            Registry registry,
+            WhiteboardService whiteboardService,
+            FileService fileService,
+            UserService userService
+    ) throws RemoteException {
+        this.registry = registry;
+        this.fileService = fileService;
+        this.whiteboardService = whiteboardService;
+        this.userService = userService;
+    }
+
+
+    /**
+     * Constructor for the server.
+     *
+     * @param whiteboardService the whiteboard service
+     * @param fileService       the file service
+     * @param userService       the user service
+     * @throws RemoteException if an error occurs during remote object creation
+     */
     protected WhiteboardServer(
             WhiteboardService whiteboardService,
             FileService fileService,
             UserService userService
     ) throws RemoteException {
         super();
-
-        // Inject clients into services
-        fileService.setClients(clients);
-        whiteboardService.setClients(clients);
-        userService.setClients(clients);
 
         this.fileService = fileService;
         this.whiteboardService = whiteboardService;
@@ -70,14 +107,14 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
     public void registerClient(boolean isAdmin, String username, IClientCallback callback) throws RemoteException {
         // User can only register as an admin if no admin is registered, yet
         // Admin can only be registered if no other admin is registered
-        if (isAdmin && !userService.hasAdmin()) {
-            userService.setAdmin(username);
-            // TODO create canvas storage
-        } else if (isAdmin && userService.hasAdmin() && !Objects.equals(userService.getAdmin(), username)) {
-            throw new RemoteException("Only one admin can be registered at a time");
-        } else if (!isAdmin && !userService.hasAdmin()) {
-            throw new RemoteException("No admin registered yet, please register as admin first");
-        }
+//        if (isAdmin && !userService.hasAdmin()) {
+//            userService.setAdmin(username);
+//            // TODO create canvas storage
+//        } else if (isAdmin && userService.hasAdmin() && !Objects.equals(userService.getAdmin(), username)) {
+//            throw new RemoteException("Only one admin can be registered at a time");
+//        } else if (!isAdmin && !userService.hasAdmin()) {
+//            throw new RemoteException("No admin registered yet, please register as admin first");
+//        }
 
         userService.registerClient(username, callback);
 
@@ -89,10 +126,10 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
 
     @Override
     public void unregisterClient(String username) throws RemoteException {
-        if (userService.hasAdmin() && Objects.equals(userService.getAdmin(), username)) {
-            userService.setAdmin("");
-            // TODO clean canvas storage
-        }
+//        if (userService.hasAdmin() && Objects.equals(userService.getAdmin(), username)) {
+//            userService.setAdmin("");
+//            // TODO clean canvas storage
+//        }
         userService.unregisterClient(username);
     }
 
@@ -109,14 +146,17 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
     }
 
     @Override
-    public void kickUser(String senderName, String username) throws RemoteException {
-        if (!Objects.equals(senderName, userService.getAdmin())) {
-            userService.kickUser(username);
-        } else if (Objects.equals(username, userService.getAdmin())) {
-            throw new RemoteException("You cannot kick yourself");
+    public void kickUser(String senderName, String targetUsername) throws RemoteException {
+        if (userService.hasAdmin() && Objects.equals(senderName, userService.getAdmin())) {
+            if (Objects.equals(targetUsername, userService.getAdmin())) {
+                throw new RemoteException("Admin cannot kick themselves.");
+            }
+            System.out.println("Admin '" + senderName + "' attempting to kick user '" + targetUsername + "'");
+            userService.kickUser(targetUsername); // Delegate kick logic to UserService
         } else {
-            throw new RemoteException("You are not the admin");
+            throw new RemoteException("User '" + senderName + "' does not have permission to kick users (not admin).");
         }
+
     }
 
     // TODO : implement importCanvas
@@ -126,4 +166,75 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
     // TODO : implement newCanvas
 
     // TODO : implement saveCanvas
+
+
+    /**
+     * Notifies all connected clients that the server is shutting down.
+     */
+    private void notifyClientsOfShutdown() {
+        System.out.println("Notifying clients of server shutdown...");
+
+        // Create a copy of the client list to avoid ConcurrentModificationException
+        // if a client disconnects during notification.
+        List<Map.Entry<String, IClientCallback>> clientsToNotify = new ArrayList<>(userService.getClients().entrySet());
+
+        // Notify each client
+        for (Map.Entry<String, IClientCallback> entry : clientsToNotify) {
+            String username = entry.getKey();
+            IClientCallback client = entry.getValue();
+            try {
+                client.onServerShutdown("Server is shutting down gracefully.");
+                System.out.println("Notified client: " + username);
+            } catch (RemoteException ex) {
+                // Handle the case where the client is no longer reachable
+                System.err.println("Error: Could not notify client " + username + " of shutdown: " + ex.getMessage());
+            }
+        }
+        System.out.println("Finished notifying clients.");
+    }
+
+    /**
+     * Gracefully shuts down the server, services, and RMI components.
+     */
+    public void shutdown() {
+        System.out.println("Initiating server shutdown sequence...");
+
+        // Unbind from the registry to stop accepting new connections
+        if (this.registry != null) {
+            try {
+                registry.unbind("WhiteboardServer");
+                System.out.println("Server unbound from RMI registry");
+            } catch (Exception e) {
+                System.err.println("Error unbinding server from registry: " + e.getMessage());
+            }
+        } else {
+            System.err.println("Warning: Registry reference is null, cannot unbind");
+        }
+
+
+        // Notify connected clients
+        notifyClientsOfShutdown();
+
+        // Shutdown internal services
+        if (whiteboardService != null) {
+            whiteboardService.shutdown();
+        }
+        if (fileService != null) {
+            fileService.shutdown();
+        }
+        if (userService != null) {
+            userService.shutdown();
+        }
+
+        // Unexport the main server RMI object
+        try {
+            UnicastRemoteObject.unexportObject(this, true); // true = force unexport
+            System.out.println("WhiteboardServer RMI object unexported successfully");
+        } catch (NoSuchObjectException e) {
+            System.err.println("Error: unexporting server RMI object (already unexported?): " + e.getMessage());
+        }
+
+        System.out.println("Server shutdown sequence complete");
+    }
+
 }

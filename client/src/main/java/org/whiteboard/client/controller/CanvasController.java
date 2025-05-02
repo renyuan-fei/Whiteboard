@@ -25,7 +25,6 @@ import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
 
-import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -248,8 +247,6 @@ public class CanvasController {
             switch (currentTool) {
                 // Real-time drawing
                 case FREEHAND -> {
-                    double size = slider.getValue();
-
                     gc.strokeLine(lastPoint.getX(), lastPoint.getY(), curr.getX(), curr.getY());
 
                     sendSegment(lastPoint, curr, colorPicker.getValue(), slider.getValue());
@@ -262,7 +259,6 @@ public class CanvasController {
 
                     // Real-time preview in local canvas
                     pgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-//                    pgc.setLineWidth(size);
                     pgc.strokeRect(
                             curr.getX() - size / 2,
                             curr.getY() - size / 2,
@@ -383,7 +379,7 @@ public class CanvasController {
     }
 
     private void sendPoint(Point point) {
-        DrawAction act = new DrawAction(
+        DrawAction action = new DrawAction(
                 0,
                 connectionManager.getUsername(),
                 null,
@@ -392,45 +388,49 @@ public class CanvasController {
                 colorPicker.getValue().toString(),
                 slider.getValue()
         );
-        try {
-            connectionManager.drawAction(act);
-        } catch (RemoteException e) {
-            System.out.println("Failed to send point action: " + e.getMessage());
-        }
+        connectionManager.drawAction(action)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Async Failure sending draw action: " + ex.getMessage());
+
+                    return null;
+                });
     }
 
     // Send a Freehand segment to the server
     private void sendSegment(Point p1, Point p2, Color color, double width) {
-        DrawAction act = new DrawAction(
+        DrawAction action = new DrawAction(
                 0, connectionManager.getUsername(), null,
                 DrawAction.ShapeType.FREEHAND, List.of(p1, p2),
                 color.toString(), width
         );
-        try {
-            connectionManager.drawAction(act);
-        } catch (RemoteException e) {
-            System.out.println("Failed to send draw action: " + e.getMessage());
-        }
+        connectionManager.drawAction(action)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Async Failure sending draw action: " + ex.getMessage());
+
+                    return null;
+                });
     }
 
     private void sendErase(Point point, double size) {
-        EraseAction er = new EraseAction(
+        EraseAction action = new EraseAction(
                 0,
                 connectionManager.getUsername(),
                 null,
                 List.of(point),
                 size
         );
-        try {
-            connectionManager.eraseAction(er);
-        } catch (RemoteException e) {
-            System.out.println("Failed to send erase action: " + e.getMessage());
-        }
+        connectionManager.eraseAction(action)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Async Failure sending erase action: " + ex.getMessage());
+
+                    return null;
+                });
+
     }
 
     // Send a shape to the server
     private void sendShape(List<Point> pts, DrawAction.ShapeType type) {
-        DrawAction act = new DrawAction(
+        DrawAction action = new DrawAction(
                 0,
                 connectionManager.getUsername(),
                 null,
@@ -439,11 +439,12 @@ public class CanvasController {
                 colorPicker.getValue().toString(),
                 slider.getValue()
         );
-        try {
-            connectionManager.drawAction(act);
-        } catch (RemoteException e) {
-            System.out.println("Failed to send shape action: " + e.getMessage());
-        }
+        connectionManager.drawAction(action)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Async Failure sending shape action: " + ex.getMessage());
+
+                    return null;
+                });
     }
 
     private void drawLine(Point start, Point end, GraphicsContext gc) {
@@ -549,8 +550,6 @@ public class CanvasController {
 
             double textPositionX = editingField.getLayoutX();
             double textPositionY = editingField.getLayoutY();
-            System.out.println(textPositionX + ", " + textPositionY + " " + textHeight);
-            System.out.println("Text position: " + textPositionX + ", " + textPositionY + textHeight * 0.8);
 
             // agile the text position
             tgc.fillText(txt, textPositionX, textPositionY + textHeight * 0.8);
@@ -587,12 +586,12 @@ public class CanvasController {
                 TextAction.TextType.ADD,
                 textElement
         );
-        try {
-            System.out.println("Sending text action " + action);
-            connectionManager.textAction(action);
-        } catch (RemoteException e) {
-            System.out.println("Failed to send text add action: " + e.getMessage());
-        }
+        connectionManager.textAction(action)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Async Failure sending text add action: " + ex.getMessage());
+
+                    return null;
+                });
     }
 
     private void sendRemoveTextAction(TextElement textElement) {
@@ -603,29 +602,26 @@ public class CanvasController {
                 TextAction.TextType.REMOVE,
                 textElement
         );
-        try {
-            connectionManager.textAction(action);
-        } catch (RemoteException e) {
-            System.out.println("Failed to send text remove action: " + e.getMessage());
-        }
+        connectionManager.textAction(action)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Async Failure sending text remove action: " + ex.getMessage());
+
+                    return null;
+                });
     }
 
     public void renderRemoteTextAction(TextAction textAction) {
         tgc.setFill(Color.web(textAction.getColor()));
         tgc.setFont(new Font(textAction.getScale() * 4));
         double textHeight = computeTextHeight(textAction.getScale());
-        System.out.println(textAction.getPosition().getX() + ", " + textAction.getPosition().getY() + " " + textHeight);
-        System.out.println("Rendering text action " + textAction + " at " + textAction.getPosition().getX() + ", " + textAction.getPosition().getY() + textHeight * 0.8);
         tgc.fillText(textAction.getText(), textAction.getPosition().getX(), textAction.getPosition().getY() + textHeight * 0.8);
 
         // add the text element to the list
         TextElement textElement = textAction.getTextElement();
-        System.out.println("Adding text element " + textElement);
         textElements.add(textElement);
     }
 
     public void renderRemoteRemoveTextActions(TextAction textActions) {
-        System.out.println("Removing text element " + textActions.getTextElement());
         textElements.remove(textActions.getTextElement());
         reDrawText();
     }
@@ -640,17 +636,16 @@ public class CanvasController {
         Text helper = new Text("Ay");
         helper.setFont(new Font(scale * 4));
         helper.setBoundsType(TextBoundsType.LOGICAL);
-
-        System.out.println("Text height: " + helper.fontProperty().get().getSize());
-        System.out.println("Text height: " + helper.getLayoutBounds());
         return helper.getLayoutBounds().getHeight();
     }
 
     private TextElement hitText(double x, double y) {
+        // Iterate in reverse order to find the topmost text element
         for (int i = textElements.size() - 1; i >= 0; i--) {
             TextElement t = textElements.get(i);
+
+            // Check if the point is within the bounds of the text element
             if (t.bounds().contains(x, y)) {
-                System.out.println("Hit text at " + t.x() + ", " + t.y());
                 return t;
             }
         }
@@ -658,7 +653,10 @@ public class CanvasController {
     }
 
     private void reDrawText() {
+        // Clear the text canvas
         tgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+
+        // Redraw all text elements
         for (TextElement textElement : textElements) {
             tgc.setFont(new Font(textElement.scale() * 4));
             tgc.setFill(Color.web(textElement.color().toString()));
@@ -667,7 +665,7 @@ public class CanvasController {
         }
     }
 
-
+    // Test for text bounds
     private void drawBounds(TextElement te) {
         gc.setLineWidth(1);
         gc.setStroke(Color.RED);

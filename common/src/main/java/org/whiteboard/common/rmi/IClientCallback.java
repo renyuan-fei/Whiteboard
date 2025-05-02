@@ -39,4 +39,12 @@ public interface IClientCallback extends Remote {
      * @throws RemoteException on network error
      */
     void onKicked() throws RemoteException;
+
+    /**
+     * Invoked when the server is shutting down.
+     *
+     * @param reason shutdown reason
+     * @throws RemoteException on network error
+     */
+    void onServerShutdown(String reason) throws RemoteException;
 }

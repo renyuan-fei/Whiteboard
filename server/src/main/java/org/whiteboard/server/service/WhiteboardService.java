@@ -2,33 +2,33 @@ package org.whiteboard.server.service;
 
 import org.whiteboard.common.action.Action;
 import org.whiteboard.common.rmi.IClientCallback;
+import org.whiteboard.server.event.AsyncActionBroadcaster;
+import org.whiteboard.server.event.EventBus;
 
 import java.rmi.RemoteException;
 import java.util.Map;
 
 public class WhiteboardService extends Service {
 
-    public WhiteboardService() {
+    final EventBus<Action> eventBus;
+    final AsyncActionBroadcaster actionBroadcaster;
+
+
+    public WhiteboardService(Map<String, IClientCallback> clients) {
         super();
+        setClients(clients);
+        eventBus = new EventBus<>(getClients());
+        actionBroadcaster = new AsyncActionBroadcaster();
+        eventBus.register(actionBroadcaster);
     }
 
     /**
      * Broadcast an action to all clients except the one who sent it.
      *
      * @param action (drawing action, Erase action, Text action)
-     * @throws RemoteException error
      */
-    public synchronized void broadcastAction(Action action) throws RemoteException {
-        System.out.println("Broadcasting action from" + action.getUsername() + " to all clients");
-        for (Map.Entry<String, IClientCallback> entry : getClients().entrySet()) {
-            String clientName = entry.getKey();
-            IClientCallback client = entry.getValue();
-
-            if (!clientName.equals(action.getUsername())) {
-                System.out.println("Broadcasting action to client: " + clientName);
-                client.onAction(action);
-            }
-        }
+    public void broadcastAction(Action action) {
+        eventBus.publish(action);
     }
 
     /**
@@ -39,5 +39,13 @@ public class WhiteboardService extends Service {
      * @throws RemoteException error
      */
     public synchronized void importCanvas(String username, String canvasData) throws RemoteException {
+    }
+
+    /**
+     * Shutdown the event bus and the action broadcaster.
+     */
+    public void shutdown() {
+        eventBus.shutdown();
+        actionBroadcaster.shutdown();
     }
 }

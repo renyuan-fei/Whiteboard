@@ -50,5 +50,5 @@ public interface IWhiteboardServer extends Remote {
      * @param username username to be kicked
      * @throws RemoteException on network error
      */
-    void kickUser(String senderName, String username) throws RemoteException;
+    void kickUser(String senderName, String targetUsername) throws RemoteException;
 }

@@ -9,8 +9,9 @@ public class UserService extends Service {
 
     private String Admin = "";
 
-    public UserService() {
+    public UserService(Map<String, IClientCallback> clients) {
         super();
+        setClients(clients);
     }
 
     public synchronized boolean hasAdmin() {
@@ -69,5 +70,10 @@ public class UserService extends Service {
         } else {
             System.out.println("User " + username + " not found");
         }
+    }
+
+    public void shutdown() {
+        System.out.println("Shutting down FileService...");
+        System.out.println("FileService shut down.");
     }
 }
