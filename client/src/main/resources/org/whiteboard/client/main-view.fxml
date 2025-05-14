@@ -5,7 +5,7 @@
 <Pane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
       prefHeight="830.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="org.whiteboard.client.controller.MainController">
-    <MenuBar fx:id="menuBar" prefHeight="30.0" prefWidth="1200.0">
+    <MenuBar fx:id="menuBar" prefHeight="30.0" prefWidth="1500.0">
         <Menu fx:id="menuFile" mnemonicParsing="false" text="File">
             <MenuItem fx:id="fileNew" mnemonicParsing="false" text="New"/>
             <MenuItem fx:id="fileOpen" mnemonicParsing="false" text="Open"/>
@@ -15,4 +15,5 @@
         </Menu>
     </MenuBar>
     <fx:include source="canvas-view.fxml" layoutY="28.0"/>
+    <fx:include source="chat-view.fxml" layoutX="1200" layoutY="29.0"/>
 </Pane>

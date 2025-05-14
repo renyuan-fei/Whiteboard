@@ -2,6 +2,7 @@ package org.whiteboard.client;
 
 import javafx.application.Platform;
 import org.whiteboard.client.controller.CanvasController;
+import org.whiteboard.client.controller.ChatController;
 import org.whiteboard.common.action.Action;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
@@ -128,7 +129,12 @@ public class WhiteboardClient implements IClientCallback {
 
     @Override
     public void onSendMessage(String username, String message) throws RemoteException {
-        System.out.println(username + ": " + message);
+        Platform.runLater(() -> {
+            ChatController ctrl = ConnectionManager.getInstance().getChatController();
+            if (ctrl != null) {
+                ctrl.receiveMessage(username, message);
+            }
+        });
     }
 
     @Override

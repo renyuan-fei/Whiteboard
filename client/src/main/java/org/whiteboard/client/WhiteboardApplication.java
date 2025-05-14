@@ -71,7 +71,7 @@ public class WhiteboardApplication extends javafx.application.Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(WhiteboardApplication.class.getResource("main-view.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 1200, 830);
+        Scene scene = new Scene(fxmlLoader.load(), 1500, 830);
         stage.setResizable(false);
 
         // Set the title based on the mode

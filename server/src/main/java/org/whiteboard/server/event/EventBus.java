@@ -36,7 +36,7 @@ public class EventBus<E extends IEvent> {
     }
 
     /**
-     * Publishes an Action event to all registered listeners asynchronously.
+     * Publishes an event to all registered listeners asynchronously.
      *
      * @param event The event to publish.
      */
@@ -47,7 +47,7 @@ public class EventBus<E extends IEvent> {
                     // Pass the current state of the clients map to the listener
                     listener.onEventReceived(event, clients);
                 } catch (Exception e) {
-                    System.err.println("Error: dispatching action event to listener: " + e.getMessage());
+                    System.err.println("Error: dispatching event to listener: " + e.getMessage());
                     e.printStackTrace();
                 }
             }

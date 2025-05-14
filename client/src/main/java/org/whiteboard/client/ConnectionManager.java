@@ -1,6 +1,7 @@
 package org.whiteboard.client;
 
 import org.whiteboard.client.controller.CanvasController;
+import org.whiteboard.client.controller.ChatController;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
@@ -22,6 +23,8 @@ public class ConnectionManager {
     private IClientCallback callback;
 
     private CanvasController canvasController;
+
+    private ChatController chatController;
 
     // Executor for background network tasks
     // Using a cached thread pool suitable for potentially many short-lived tasks
@@ -57,6 +60,14 @@ public class ConnectionManager {
         this.callback = callback;
         this.username = username;
         System.out.println("ConnectionManager initialized for user: " + username);
+    }
+
+    public void setChatController(ChatController controller) {
+        this.chatController = controller;
+    }
+
+    public ChatController getChatController() {
+        return chatController;
     }
 
     public void setCanvasController(CanvasController controller) {
@@ -96,7 +107,7 @@ public class ConnectionManager {
         return CompletableFuture.runAsync(() -> {
             try {
                 remoteCall.execute();
-                System.out.println("Successfully sent: " + actionDescription);
+//                System.out.println("Successfully sent: " + actionDescription);
             } catch (RemoteException ex) {
                 System.err.println("RMI Error during [" + actionDescription + "]: " + ex.getMessage());
 

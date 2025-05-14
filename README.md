@@ -14,7 +14,7 @@
   - [ ] Left
   - [ ] Close when admin leaves
 - Advanced
-  - [ ] Chat
+  - [x] Chat
   - [ ] Open
   - [ ] Save
   - [ ] Save as (Image, PDF etc.)
