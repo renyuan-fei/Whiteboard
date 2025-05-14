@@ -17,7 +17,7 @@ public class WhiteboardService extends Service {
     public WhiteboardService(Map<String, IClientCallback> clients) {
         super();
         setClients(clients);
-        eventBus = new EventBus<>(getClients());
+        eventBus = new EventBus<>(clients);
         actionBroadcaster = new AsyncActionBroadcaster();
         eventBus.register(actionBroadcaster);
     }
@@ -27,7 +27,8 @@ public class WhiteboardService extends Service {
      *
      * @param action (drawing action, Erase action, Text action)
      */
-    public void broadcastAction(Action action) {
+    public void broadcastAction(String username, Action action) throws RemoteException {
+        assertRegistered(username);
         eventBus.publish(action);
     }
 
@@ -39,6 +40,7 @@ public class WhiteboardService extends Service {
      * @throws RemoteException error
      */
     public synchronized void importCanvas(String username, String canvasData) throws RemoteException {
+        assertRegistered(username);
     }
 
     /**

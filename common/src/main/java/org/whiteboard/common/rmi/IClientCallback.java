@@ -4,6 +4,7 @@ import org.whiteboard.common.action.Action;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.List;
 
 /**
  * Client-side callback interface.
@@ -32,6 +33,24 @@ public interface IClientCallback extends Remote {
      * @throws RemoteException on network error
      */
     void onSendMessage(String username, String message) throws RemoteException;
+
+    /**
+     * @param username new attend username
+     * @throws RemoteException on network error
+     */
+    void onInitialUserList(List<String> username) throws RemoteException;
+
+    /**
+     * @param username new attend username
+     * @throws RemoteException on network error
+     */
+    void onAddUser(String username) throws RemoteException;
+
+    /**
+     * @param username leave username
+     * @throws RemoteException on network error
+     */
+    void onRemoveUser(String username) throws RemoteException;
 
     /**
      * Invoked when this client is kicked.

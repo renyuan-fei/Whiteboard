@@ -40,7 +40,12 @@ public class ChatController {
         if (!message.isEmpty()) {
             textFlow.getChildren().add(new Text(connectionManager.getUsername() + ": " + message + "\n"));
 
-            connectionManager.sendChatMessage(connectionManager.getUsername(), message);
+            connectionManager.sendChatMessage(connectionManager.getUsername(), message)
+                    .exceptionally(ex -> {
+                        System.err.println("Error: Fail to send message: " + ex.getMessage());
+
+                        return null;
+                    });
 
             // Clear the input field after sending
             inputField.setText("");

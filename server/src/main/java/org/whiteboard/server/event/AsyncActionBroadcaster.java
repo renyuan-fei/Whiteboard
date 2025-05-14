@@ -27,6 +27,8 @@ public class AsyncActionBroadcaster implements IEventListener<Action> {
             String clientName = entry.getKey();
             IClientCallback clientCallback = entry.getValue();
 
+            System.out.println("Checking client: " + clientName);
+
             if (!clientName.equals(action.getUsername())) {
                 // Submit the RMI call to the broadcast executor pool
                 broadcastExecutor.submit(() -> {

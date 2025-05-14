@@ -12,11 +12,11 @@ public class BackgroundWorker {
 
                 System.out.println("Starting RMI client in background...");
 
-                IClientCallback callback = WhiteboardClient.createClient(host, port, username);
+                IClientCallback callback = WhiteboardClient.createClient(isAdmin, host, port, username);
                 IWhiteboardServer whiteboardServer = callback.getWhiteboardServer();
 
                 // Initialize the connection manager with the whiteboardServer and callback
-                ConnectionManager.getInstance().init(whiteboardServer, callback, username);
+                ConnectionManager.getInstance().init(whiteboardServer, callback, username, isAdmin);
 
                 System.out.println("RMI client started.");
                 return null;
@@ -25,6 +25,9 @@ public class BackgroundWorker {
 
         backgroundTask.setOnFailed(ex -> {
             System.err.println("Error: Failed to start RMI client: " + backgroundTask.getException());
+
+            // TODO fix exit
+            System.exit(0);
         });
 
         // run task on a separate daemon thread

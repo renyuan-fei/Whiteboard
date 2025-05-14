@@ -2,6 +2,7 @@ package org.whiteboard.client;
 
 import org.whiteboard.client.controller.CanvasController;
 import org.whiteboard.client.controller.ChatController;
+import org.whiteboard.client.controller.UsersController;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
@@ -17,14 +18,18 @@ import java.util.concurrent.TimeUnit;
 public class ConnectionManager {
     // Eager singleton
     private static final ConnectionManager INSTANCE = new ConnectionManager();
-
+    private boolean isAdmin;
     private String username;
+
+    private volatile boolean connected;
     private IWhiteboardServer server;
     private IClientCallback callback;
 
     private CanvasController canvasController;
 
     private ChatController chatController;
+
+    private UsersController usersController;
 
     // Executor for background network tasks
     // Using a cached thread pool suitable for potentially many short-lived tasks
@@ -51,7 +56,7 @@ public class ConnectionManager {
      * @param callback local callback stub
      * @param username the client's username
      */
-    public void init(IWhiteboardServer service, IClientCallback callback, String username) {
+    public void init(IWhiteboardServer service, IClientCallback callback, String username, boolean isAdmin) {
         if (service == null) {
             System.err.println("Error: IWhiteboardServer service cannot be null in ConnectionManager.init()");
             throw new IllegalArgumentException("IWhiteboardServer service cannot be null");
@@ -59,7 +64,16 @@ public class ConnectionManager {
         this.server = service;
         this.callback = callback;
         this.username = username;
+        this.isAdmin = isAdmin;
         System.out.println("ConnectionManager initialized for user: " + username);
+    }
+
+    public void setUsersController(UsersController controller) {
+        this.usersController = controller;
+    }
+
+    public UsersController getUsersController() {
+        return usersController;
     }
 
     public void setChatController(ChatController controller) {
@@ -86,8 +100,20 @@ public class ConnectionManager {
         return callback;
     }
 
+    public void setConnected(boolean connected) {
+        this.connected = connected;
+    }
+
+    public boolean isConnected() {
+        return this.connected;
+    }
+
     public String getUsername() {
         return username;
+    }
+
+    public boolean isAdmin() {
+        return isAdmin;
     }
 
     /**
@@ -97,6 +123,9 @@ public class ConnectionManager {
      * @param remoteCall        Lambda expression containing the actual RMI call
      */
     private CompletableFuture<Void> performRemoteCall(String actionDescription, RemoteCallExecutor remoteCall) {
+        if (!isConnected()) {
+            return CompletableFuture.failedFuture(new IllegalStateException("Client disconnected."));
+        }
         if (server == null) {
             System.err.println("Error: Cannot " + actionDescription + ". Server connection not initialized.");
             // Return a future that has already failed
@@ -125,13 +154,14 @@ public class ConnectionManager {
         void execute() throws RemoteException;
     }
 
+
     /**
      * Sends a DrawAction asynchronously.
      *
      * @param action The DrawAction to send.
      */
     public CompletableFuture<Void> drawAction(DrawAction action) {
-        return performRemoteCall("draw action", () -> server.broadcastAction(action));
+        return performRemoteCall("draw action", () -> server.broadcastAction(username, action));
     }
 
     /**
@@ -140,7 +170,7 @@ public class ConnectionManager {
      * @param action The EraseAction to send.
      */
     public CompletableFuture<Void> eraseAction(EraseAction action) {
-        return performRemoteCall("erase action", () -> server.broadcastAction(action));
+        return performRemoteCall("erase action", () -> server.broadcastAction(username, action));
     }
 
     /**
@@ -150,17 +180,17 @@ public class ConnectionManager {
      */
     public CompletableFuture<Void> textAction(TextAction action) {
         System.out.println("Queueing text action for async send: " + action);
-        return performRemoteCall("text action", () -> server.broadcastAction(action));
+        return performRemoteCall("text action", () -> server.broadcastAction(username, action));
     }
 
     /**
      * Sends a chat message asynchronously.
      *
-     * @param user The username sending the message.
-     * @param msg  The message content.
+     * @param username The username sending the message.
+     * @param message  The message content.
      */
-    public CompletableFuture<Void> sendChatMessage(String user, String msg) {
-        return performRemoteCall("send chat message", () -> server.broadcastMessage(user, msg));
+    public CompletableFuture<Void> sendChatMessage(String username, String message) {
+        return performRemoteCall("send chat message", () -> server.broadcastMessage(username, message));
     }
 
     /**
@@ -186,6 +216,7 @@ public class ConnectionManager {
         // Disable new tasks from being submitted
         networkExecutor.shutdown();
         try {
+            server.unregisterClient(username);
             // Wait a while for existing tasks to terminate
             if (!networkExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
 
@@ -202,6 +233,8 @@ public class ConnectionManager {
             networkExecutor.shutdownNow();
             // Preserve interrupt status
             Thread.currentThread().interrupt();
+        } catch (RemoteException e) {
+            System.err.println("Error: Failed to unregister client: " + e.getMessage());
         }
         System.out.println("ConnectionManager network executor shut down.");
     }

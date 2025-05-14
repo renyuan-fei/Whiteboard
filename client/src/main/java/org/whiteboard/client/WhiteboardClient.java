@@ -3,6 +3,7 @@ package org.whiteboard.client;
 import javafx.application.Platform;
 import org.whiteboard.client.controller.CanvasController;
 import org.whiteboard.client.controller.ChatController;
+import org.whiteboard.client.controller.UsersController;
 import org.whiteboard.common.action.Action;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
@@ -14,12 +15,14 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.List;
 
 public class WhiteboardClient implements IClientCallback {
 
     private static final String SERVICE_NAME = "WhiteboardServer";
     private final IWhiteboardServer whiteboardServer;
     private final String username;
+
 
     /**
      * Create a new client instance.
@@ -33,7 +36,7 @@ public class WhiteboardClient implements IClientCallback {
         return new WhiteboardClient(false, host, port, username);
     }
 
-    public static WhiteboardClient createClient(String host, int port, String username, boolean isAdmin) throws RemoteException {
+    public static WhiteboardClient createClient(boolean isAdmin, String host, int port, String username) throws RemoteException {
         return new WhiteboardClient(isAdmin, host, port, username);
     }
 
@@ -59,10 +62,12 @@ public class WhiteboardClient implements IClientCallback {
 
         this.whiteboardServer = whiteboardServer;
 
+        ConnectionManager.getInstance().setConnected(true);
+
         try {
             this.whiteboardServer.registerClient(isAdmin, username, this);
         } catch (RemoteException e) {
-            throw new RemoteException("Failed to register callback", e);
+            throw new RemoteException("Failed to register callback ", e);
         }
     }
 
@@ -78,8 +83,12 @@ public class WhiteboardClient implements IClientCallback {
      * Disconnect from the server and unregister the client.
      */
     public void disconnect() {
+        if (!ConnectionManager.getInstance().isConnected()) return;
+
         try {
             whiteboardServer.unregisterClient(username);
+            ConnectionManager.getInstance().setConnected(false);
+
         } catch (RemoteException e) {
             System.err.println("Error: Failed to unregister client: " + e.getMessage());
         } finally {
@@ -90,10 +99,8 @@ public class WhiteboardClient implements IClientCallback {
             } catch (Exception e) {
                 System.err.println("Error: Failed to unexport client: " + e.getMessage());
             }
-
         }
     }
-
 
     @Override
     public void onAction(Action action) throws RemoteException {
@@ -104,25 +111,22 @@ public class WhiteboardClient implements IClientCallback {
                     ctrl.renderRemoteDrawAction(draw);
                 }
             });
-            case EraseAction erase ->
-                    Platform.runLater(() -> {
-                        CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
-                        if (ctrl != null) {
-                            ctrl.renderRemoteEraseAction(erase);
-                        }
-                    });
-            case TextAction text -> {
-                Platform.runLater(() -> {
-                    CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
-                    if (ctrl != null) {
-                        if (text.getTextType() == TextAction.TextType.ADD) {
-                            ctrl.renderRemoteTextAction(text);
-                        } else if (text.getTextType() == TextAction.TextType.REMOVE) {
-                            ctrl.renderRemoteRemoveTextActions(text);
-                        }
+            case EraseAction erase -> Platform.runLater(() -> {
+                CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                if (ctrl != null) {
+                    ctrl.renderRemoteEraseAction(erase);
+                }
+            });
+            case TextAction text -> Platform.runLater(() -> {
+                CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+                if (ctrl != null) {
+                    if (text.getTextType() == TextAction.TextType.ADD) {
+                        ctrl.renderRemoteTextAction(text);
+                    } else if (text.getTextType() == TextAction.TextType.REMOVE) {
+                        ctrl.renderRemoteRemoveTextActions(text);
                     }
-                });
-            }
+                }
+            });
             default -> System.err.println("Error: Unknown action type: " + action.getClass().getName());
         }
     }
@@ -137,15 +141,57 @@ public class WhiteboardClient implements IClientCallback {
         });
     }
 
+    public void onInitialUserList(List<String> usernames) throws RemoteException {
+        Platform.runLater(() -> {
+            UsersController utrl = ConnectionManager.getInstance().getUsersController();
+
+            if (utrl != null) {
+                utrl.initialUserList(usernames);
+            }
+        });
+    }
+
+    @Override
+    public void onAddUser(String username) throws RemoteException {
+        Platform.runLater(() -> {
+            UsersController utrl = ConnectionManager.getInstance().getUsersController();
+
+            if (utrl != null) {
+                utrl.addNewUser(username);
+            }
+        });
+    }
+
+    @Override
+    public void onRemoveUser(String username) throws RemoteException {
+        Platform.runLater(() -> {
+            UsersController utrl = ConnectionManager.getInstance().getUsersController();
+
+            if (utrl != null) {
+                utrl.removeUser(username);
+            }
+        });
+    }
+
     @Override
     public void onKicked() throws RemoteException {
+
         disconnect();
+        Platform.runLater(() -> {
+            ChatController ctrl = ConnectionManager.getInstance().getChatController();
+            if (ctrl != null) {
+                ctrl.receiveMessage("Warning!", "You are be kicked by Admin");
+            }
+        });
+
+        //TODO disable
     }
 
     @Override
     public void onServerShutdown(String reason) throws RemoteException {
+
         System.out.println("Received server shutdown notification: " + reason);
-        // Trigger client-side cleanup, similar to disconnect but without calling server
+        // Trigger client-side cleanup, similar to disconnect but without calling the server
         cleanupLocalResources();
     }
 
@@ -166,7 +212,7 @@ public class WhiteboardClient implements IClientCallback {
 
 
     /**
-     * Connect to the RMI registry and lookup the service with retry logic.
+     * Connect to the RMI registry and look up the service with retry logic.
      *
      * @param maxRetries   maximum number of retries
      * @param retryDelayMs initial delay between retries in milliseconds
@@ -178,10 +224,9 @@ public class WhiteboardClient implements IClientCallback {
         int attempt = 1;
         while (attempt <= maxRetries) {
             try {
-                // Try to get the registry and lookup the service
+                // Try to get the registry and look up the service
                 Registry registry = LocateRegistry.getRegistry(host, port);
-                IWhiteboardServer server = (IWhiteboardServer) registry.lookup(serviceName);
-                return server;
+                return (IWhiteboardServer) registry.lookup(serviceName);
 
             } catch (Exception ex) {
                 System.err.format("Attempt %d failed: %s%n", attempt, ex.getMessage());

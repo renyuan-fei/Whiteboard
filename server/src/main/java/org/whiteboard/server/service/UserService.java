@@ -3,6 +3,7 @@ package org.whiteboard.server.service;
 import org.whiteboard.common.rmi.IClientCallback;
 
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Map;
 
 public class UserService extends Service {
@@ -18,32 +19,50 @@ public class UserService extends Service {
         return !Admin.isEmpty();
     }
 
-    public synchronized void setAdmin(String name) {
-        this.Admin = name;
+    public synchronized void setAdmin(String username) {
+        this.Admin = username;
     }
 
     public synchronized String getAdmin() {
         return Admin;
     }
 
-    public synchronized void registerClient(String name, IClientCallback callback) throws RemoteException {
+    public synchronized void registerClient(String username, IClientCallback callback) throws RemoteException {
         // Check if the client is already registered
-        if (getClients().containsKey(name)) {
-            System.out.println("Client " + name + " is already registered, unregistering...");
-            unregisterClient(name);
-            System.out.println("Client " + name + " unregistered");
+        if (getClients().containsKey(username)) {
+            System.out.println("Client " + username + " is already registered, unregistering...");
+            unregisterClient(username);
+            System.out.println("Client " + username + " unregistered");
         }
-        getClients().put(name, callback);
-        System.out.println("Registered client: " + name);
-        broadcastMessage(name, "has joined the whiteboard");
+        callback.onInitialUserList(getUsers());
+
+        getClients().put(username, callback);
+        System.out.println("Registered client: " + username);
+        broadcastMessage(username, "has joined the whiteboard");
+
+        for (IClientCallback client : getClients().values()) {
+            client.onAddUser(username);
+        }
     }
 
-    public synchronized void unregisterClient(String name) throws RemoteException {
-        getClients().remove(name);
-        broadcastMessage(name, "has left the whiteboard");
+    public synchronized void unregisterClient(String username) throws RemoteException {
+        assertRegistered(username);
+
+        for (IClientCallback client : getClients().values()) {
+            client.onRemoveUser(username);
+        }
+        broadcastMessage(username, "has left the whiteboard");
+
+        getClients().remove(username);
+        System.out.println("Unregistered client: " + username);
+    }
+
+    public synchronized ArrayList<String> getUsers() {
+        return new ArrayList<>(getClients().keySet());
     }
 
     public synchronized void broadcastMessage(String username, String message) throws RemoteException {
+        assertRegistered(username);
         for (Map.Entry<String, IClientCallback> entry : getClients().entrySet()) {
             String clientName = entry.getKey();
             IClientCallback client = entry.getValue();
@@ -53,22 +72,28 @@ public class UserService extends Service {
         }
     }
 
-    public synchronized void kickUser(String username) throws RemoteException {
-        IClientCallback targetClient = getClients().get(username);
-        if (targetClient != null) {
+    public void kickUser(String username) throws RemoteException {
+        // Grab the stub while holding the lock only briefly
+        IClientCallback targetClient;
+        synchronized (this) {
+            targetClient = getClients().get(username);
+        }
 
-            // call disconnect on the target client
-            // disconnect will call unregisterClient
-            targetClient.onKicked();
+        if (targetClient == null) {
+            System.out.println("User " + username + " not found");
+            return;
+        }
 
-            // Check if the client has been unregistered
+        // Perform the remote callback outside the synchronized block to avoid dead‑lock
+        targetClient.onKicked();
+
+        // Check whether the user was removed after the callback
+        synchronized (this) {
             if (getClients().containsKey(username)) {
                 System.out.println("Kicked user: " + username + " Failed");
+            } else {
+                System.out.println("Kicked user: " + username + " Success");
             }
-
-            System.out.println("Kicked user: " + username + " Success");
-        } else {
-            System.out.println("User " + username + " not found");
         }
     }
 

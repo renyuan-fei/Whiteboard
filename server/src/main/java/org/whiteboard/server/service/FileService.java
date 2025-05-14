@@ -1,5 +1,6 @@
 package org.whiteboard.server.service;
 
+import java.rmi.RemoteException;
 import java.util.concurrent.ThreadPoolExecutor;
 /**
  * File service used to manage file uploads, downloads and Update.
@@ -34,8 +35,8 @@ public class FileService extends Service {
     /**
      * Upload a canvas data and import it to the server.
      */
-    public void importCanvas(String username, String canvasData) {
-
+    public void importCanvas(String username, String canvasData) throws RemoteException {
+        assertRegistered(username);
     }
 
     /**

@@ -1,5 +1,6 @@
 package org.whiteboard.client;
 
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -71,7 +72,7 @@ public class WhiteboardApplication extends javafx.application.Application {
     @Override
     public void start(Stage stage) throws IOException {
         FXMLLoader fxmlLoader = new FXMLLoader(WhiteboardApplication.class.getResource("main-view.fxml"));
-        Scene scene = new Scene(fxmlLoader.load(), 1500, 830);
+        Scene scene = new Scene(fxmlLoader.load(), 1700, 830);
         stage.setResizable(false);
 
         // Set the title based on the mode
@@ -84,19 +85,13 @@ public class WhiteboardApplication extends javafx.application.Application {
         stage.addEventHandler(WindowEvent.WINDOW_SHOWN, evt -> {
             String host = "127.0.0.1";
             int port = 3000;
-            String username = UUID.randomUUID().toString().substring(0, 8); // Example
+//            String username = UUID.randomUUID().toString().substring(0, 8); // Example
             System.out.println("Attempting connection to " + host + ":" + port + " as " + username);
             BackgroundWorker.run(host, port, username, isAdmin);
         });
 
-        // App close
-        stage.setOnCloseRequest(event -> {
-            System.out.println("Main window close requested. Shutting down...");
 
-            // Shutdown ConnectionManager executor
-            ConnectionManager.getInstance().shutdown();
-            System.out.println("Shutdown complete. Exiting.");
-        });
+        Platform.setImplicitExit(true);
 
         stage.show();
     }
@@ -109,6 +104,10 @@ public class WhiteboardApplication extends javafx.application.Application {
         ConnectionManager.getInstance().shutdown();
 
         super.stop();
+        Platform.setImplicitExit(true);
+
+        //TODO fix exit
+        System.exit(0);
     }
 
 

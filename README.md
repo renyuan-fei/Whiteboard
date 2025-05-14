@@ -10,12 +10,12 @@
   - [x] Text
   - [ ] store canvas and load when user joins
   - [ ] Manager can decide who can join(alter admin after new connection)
-  - [ ] User list
-  - [ ] Left
+  - [x] User list
+  - [x] Left
   - [ ] Close when admin leaves
 - Advanced
   - [x] Chat
   - [ ] Open
   - [ ] Save
   - [ ] Save as (Image, PDF etc.)
-  - [ ] Kick user
+  - [x] Kick user
