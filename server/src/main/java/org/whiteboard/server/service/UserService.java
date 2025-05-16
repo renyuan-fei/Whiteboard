@@ -61,6 +61,16 @@ public class UserService extends Service {
         return new ArrayList<>(getClients().keySet());
     }
 
+    public synchronized void sendMessage(String username, String message) throws RemoteException {
+        assertRegistered(username);
+        IClientCallback client = getClients().get(username);
+        if (client != null) {
+            client.onSendMessage(username, message);
+        } else {
+            System.out.println("Client " + username + " not found");
+        }
+    }
+
     public synchronized void broadcastMessage(String username, String message) throws RemoteException {
         assertRegistered(username);
         for (Map.Entry<String, IClientCallback> entry : getClients().entrySet()) {
@@ -72,7 +82,7 @@ public class UserService extends Service {
         }
     }
 
-    public void kickUser(String username) throws RemoteException {
+    public void kickUser(String username, String message) throws RemoteException {
         // Grab the stub while holding the lock only briefly
         IClientCallback targetClient;
         synchronized (this) {
@@ -85,7 +95,7 @@ public class UserService extends Service {
         }
 
         // Perform the remote callback outside the synchronized block to avoid dead‑lock
-        targetClient.onKicked();
+        targetClient.onKicked(message);
 
         // Check whether the user was removed after the callback
         synchronized (this) {

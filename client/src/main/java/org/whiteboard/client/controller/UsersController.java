@@ -45,6 +45,32 @@ public class UsersController {
     public void initialUserList(List<String> usernames) {
         if (connectionManager.isAdmin()) {
             kickUserButton.setVisible(true);
+
+            // Disable admin in admin's user list
+            userList.setCellFactory(lv -> new javafx.scene.control.ListCell<String>() {
+                @Override
+                public void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
+
+                    if (empty || item == null) {
+                        setText(null);
+                        setDisable(false);
+                    } else {
+                        setText(item);
+
+                        boolean isAdminUser = userList.getItems().indexOf(item) == 0;
+
+                        setDisable(isAdminUser);
+
+                        if (isAdminUser) {
+                            setStyle("-fx-background-color: #f0f0f0; -fx-text-fill: #999999;");
+                        } else {
+                            setStyle("");
+                        }
+                    }
+                }
+            });
+
         }
         ObservableList<String> names = FXCollections.observableArrayList(usernames);
         userList.setItems(names);

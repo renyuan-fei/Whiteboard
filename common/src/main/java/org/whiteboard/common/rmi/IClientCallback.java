@@ -57,7 +57,7 @@ public interface IClientCallback extends Remote {
      *
      * @throws RemoteException on network error
      */
-    void onKicked() throws RemoteException;
+    void onKicked(String message) throws RemoteException;
 
     /**
      * Invoked when the server is shutting down.
@@ -66,4 +66,12 @@ public interface IClientCallback extends Remote {
      * @throws RemoteException on network error
      */
     void onServerShutdown(String reason) throws RemoteException;
+
+    /**
+     * sync current white board client
+     *
+     * @param canvasData Serialized actions
+     * @throws RemoteException on network error
+     */
+    void onSyncWhiteboard(String canvasData) throws RemoteException;
 }

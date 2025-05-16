@@ -5,6 +5,7 @@ import org.whiteboard.common.event.IEvent;
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * Base class for all whiteboard actions.
@@ -13,22 +14,20 @@ public abstract class Action implements Serializable, IEvent {
     @Serial
     private static final long serialVersionUID = 1L;
 
-    private final long actionId;
+    private final String actionId;
     private final String username;
     private final Instant timestamp;
 
     /**
-     * @param actionId  unique identifier for this action
      * @param username  the user who generated this action
-     * @param timestamp time when the action was created
      */
-    public Action(long actionId, String username, Instant timestamp) {
-        this.actionId = actionId;
+    public Action(String username) {
+        this.actionId = UUID.randomUUID().toString();
         this.username = username;
-        this.timestamp = timestamp;
+        this.timestamp = Instant.now();
     }
 
-    public long getActionId() {
+    public String getActionId() {
         return actionId;
     }
 
@@ -43,7 +42,7 @@ public abstract class Action implements Serializable, IEvent {
     @Override
     public String toString() {
         return String.format(
-                "Action[id=%d, user=%s, time=%s]",
+                "Action[id=%s, user=%s, time=%s]",
                 actionId,
                 username,
                 timestamp

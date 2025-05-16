@@ -83,12 +83,15 @@ public class WhiteboardClient implements IClientCallback {
      * Disconnect from the server and unregister the client.
      */
     public void disconnect() {
-        if (!ConnectionManager.getInstance().isConnected()) return;
+        if (ConnectionManager.getInstance().isConnected()) return;
 
         try {
             whiteboardServer.unregisterClient(username);
             ConnectionManager.getInstance().setConnected(false);
-
+            Platform.runLater(() -> {
+                ChatController ctrl = ConnectionManager.getInstance().getChatController();
+                ctrl.receiveMessage("Warning! ", "Disconnected from server.");
+            });
         } catch (RemoteException e) {
             System.err.println("Error: Failed to unregister client: " + e.getMessage());
         } finally {
@@ -141,6 +144,7 @@ public class WhiteboardClient implements IClientCallback {
         });
     }
 
+    @Override
     public void onInitialUserList(List<String> usernames) throws RemoteException {
         Platform.runLater(() -> {
             UsersController utrl = ConnectionManager.getInstance().getUsersController();
@@ -174,13 +178,13 @@ public class WhiteboardClient implements IClientCallback {
     }
 
     @Override
-    public void onKicked() throws RemoteException {
+    public void onKicked(String message) throws RemoteException {
 
         disconnect();
         Platform.runLater(() -> {
             ChatController ctrl = ConnectionManager.getInstance().getChatController();
             if (ctrl != null) {
-                ctrl.receiveMessage("Warning!", "You are be kicked by Admin");
+                ctrl.receiveMessage("Warning! ", message);
             }
         });
 
@@ -189,10 +193,18 @@ public class WhiteboardClient implements IClientCallback {
 
     @Override
     public void onServerShutdown(String reason) throws RemoteException {
-
         System.out.println("Received server shutdown notification: " + reason);
         // Trigger client-side cleanup, similar to disconnect but without calling the server
         cleanupLocalResources();
+    }
+
+    @Override
+    public void onSyncWhiteboard(String canvasData) throws RemoteException {
+        Platform.runLater(() -> {
+            CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+
+            ctrl.importCanvas(canvasData);
+        });
     }
 
     /**

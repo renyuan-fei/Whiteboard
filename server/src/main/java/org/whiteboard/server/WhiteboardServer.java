@@ -111,7 +111,7 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
             userService.setAdmin(username);
             System.out.println("Admin '" + username + "' has create a new whiteboard");
             // TODO create canvas storage
-        } else if (isAdmin && userService.hasAdmin() && !Objects.equals(userService.getAdmin(), username)) {
+        } else if (isAdmin && userService.hasAdmin()) {
             throw new RemoteException("Only one admin can be registered at a time");
         } else if (!isAdmin && !userService.hasAdmin()) {
             throw new RemoteException("No admin registered yet, please register as admin first");
@@ -119,27 +119,40 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
 
         userService.registerClient(username, callback);
 
-        // TODO file service get current canvas storage
+        // file service get current canvas storage
+        String canvasData = fileService.getCanvasData();
 
-        // TODO whiteboard service import canvas storage
-
+        // whiteboard service import canvas storage
+        callback.onSyncWhiteboard(canvasData);
     }
 
     @Override
     public void unregisterClient(String username) throws RemoteException {
         if (userService.hasAdmin() && userService.getAdmin().equals(username)) {
-            userService.setAdmin("");
-            System.out.println("Admin '" + username + "' has left whiteboard");
-            // TODO clean canvas storage
+            String admin = userService.getAdmin();
 
-            // TODO kick all user
+            System.out.println("Admin '" + username + "' has left whiteboard");
+            // clean canvas storage
+            fileService.cleanData();
+
+            // kick all user
+            for (Map.Entry<String, IClientCallback> entry : userService.getClients().entrySet()) {
+                String user = entry.getKey();
+                if (!user.equals(admin)) {
+                    kickUser(admin, user, "Admin leave, whiteboard will close");
+                }
+            }
+
+            // set admin to empty
+            userService.setAdmin("");
         }
         userService.unregisterClient(username);
     }
 
     @Override
     public void broadcastAction(String username, Action action) throws RemoteException {
-        // TODO file service store action in canvas storage
+        // file service store action in canvas storage
+        fileService.addAction(action);
 
         whiteboardService.broadcastAction(username, action);
     }
@@ -150,15 +163,15 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
     }
 
     @Override
-    public void kickUser(String senderName, String targetUsername) throws RemoteException {
+    public void kickUser(String senderName, String targetUsername, String message) throws RemoteException {
         String admin = userService.getAdmin();
         if (userService.hasAdmin() && Objects.equals(senderName, admin)) {
             if (Objects.equals(targetUsername, admin)) {
                 throw new RemoteException("Admin cannot kick themselves.");
             }
             System.out.println("Admin '" + senderName + "' attempting to kick user '" + targetUsername + "'");
-            broadcastMessage(admin, "Admin '" + senderName + "' attempting to kick user '" + targetUsername + "'");
-            userService.kickUser(targetUsername); // Delegate kick logic to UserService
+            broadcastMessage(admin, " attempting to kick user '" + targetUsername + "'");
+            userService.kickUser(targetUsername, message); // Delegate kick logic to UserService
         } else {
             throw new RemoteException("User '" + senderName + "' does not have permission to kick users (not admin).");
         }

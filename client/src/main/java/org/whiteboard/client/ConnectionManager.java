@@ -105,7 +105,7 @@ public class ConnectionManager {
     }
 
     public boolean isConnected() {
-        return this.connected;
+        return !this.connected;
     }
 
     public String getUsername() {
@@ -123,7 +123,7 @@ public class ConnectionManager {
      * @param remoteCall        Lambda expression containing the actual RMI call
      */
     private CompletableFuture<Void> performRemoteCall(String actionDescription, RemoteCallExecutor remoteCall) {
-        if (!isConnected()) {
+        if (isConnected()) {
             return CompletableFuture.failedFuture(new IllegalStateException("Client disconnected."));
         }
         if (server == null) {
@@ -204,7 +204,7 @@ public class ConnectionManager {
             return CompletableFuture.failedFuture(new IllegalStateException("Client username not initialized."));
         }
         String currentUser = this.username;
-        return performRemoteCall("kick user " + targetUsername, () -> server.kickUser(currentUser, targetUsername));
+        return performRemoteCall("kick user " + targetUsername, () -> server.kickUser(currentUser, targetUsername, "You are be kicked by Admin"));
     }
 
     /**

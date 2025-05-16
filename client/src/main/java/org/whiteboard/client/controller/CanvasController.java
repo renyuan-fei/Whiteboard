@@ -21,12 +21,17 @@ import javafx.scene.text.TextBoundsType;
 import org.whiteboard.client.ConnectionManager;
 import org.whiteboard.common.Point;
 import org.whiteboard.common.TextElement;
+import org.whiteboard.common.action.Action;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
 
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 
 public class CanvasController {
 
@@ -380,9 +385,7 @@ public class CanvasController {
 
     private void sendPoint(Point point) {
         DrawAction action = new DrawAction(
-                0,
                 connectionManager.getUsername(),
-                null,
                 DrawAction.ShapeType.POINT,
                 List.of(point),
                 colorPicker.getValue().toString(),
@@ -399,7 +402,7 @@ public class CanvasController {
     // Send a Freehand segment to the server
     private void sendSegment(Point p1, Point p2, Color color, double width) {
         DrawAction action = new DrawAction(
-                0, connectionManager.getUsername(), null,
+                connectionManager.getUsername(),
                 DrawAction.ShapeType.FREEHAND, List.of(p1, p2),
                 color.toString(), width
         );
@@ -413,9 +416,7 @@ public class CanvasController {
 
     private void sendErase(Point point, double size) {
         EraseAction action = new EraseAction(
-                0,
                 connectionManager.getUsername(),
-                null,
                 List.of(point),
                 size
         );
@@ -431,9 +432,7 @@ public class CanvasController {
     // Send a shape to the server
     private void sendShape(List<Point> pts, DrawAction.ShapeType type) {
         DrawAction action = new DrawAction(
-                0,
                 connectionManager.getUsername(),
-                null,
                 type,
                 pts,
                 colorPicker.getValue().toString(),
@@ -580,9 +579,7 @@ public class CanvasController {
 
     private void sendTextAction(TextElement textElement) {
         TextAction action = new TextAction(
-                0,
                 connectionManager.getUsername(),
-                null,
                 TextAction.TextType.ADD,
                 textElement
         );
@@ -596,9 +593,7 @@ public class CanvasController {
 
     private void sendRemoveTextAction(TextElement textElement) {
         TextAction action = new TextAction(
-                0,
                 connectionManager.getUsername(),
-                null,
                 TextAction.TextType.REMOVE,
                 textElement
         );
@@ -673,7 +668,52 @@ public class CanvasController {
     }
 
     // TODO : implement import canvas
-    public void importCanvas() {
+    public void importCanvas(String canvasData) {
+        try {
+            // Rebuild canvas
+            parseAndRebuildCanvas(canvasData);
 
+        } catch (Exception e) {
+            System.err.println("Error: Fail to import data" + e.getMessage());
+            e.printStackTrace();
+        }
     }
+
+    private void parseAndRebuildCanvas(String canvasData) {
+        try {
+            byte[] data = Base64.getDecoder().decode(canvasData);
+            try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
+                 ObjectInputStream ois = new ObjectInputStream(bis)) {
+
+
+                List<Action> actions = (List<Action>) ois.readObject();
+
+                // clean the current canvas
+                gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+                tgc.clearRect(0, 0, textCanvas.getWidth(), textCanvas.getHeight());
+                textElements.clear();
+
+                // use actions to rebuild canvas in local
+                for (Action action : actions) {
+                    if (action instanceof DrawAction) {
+                        renderRemoteDrawAction((DrawAction) action);
+                    } else if (action instanceof EraseAction) {
+                        renderRemoteEraseAction((EraseAction) action);
+                    } else if (action instanceof TextAction textAction) {
+                        if (Objects.equals(textAction.getType(), "Action.Text")) {
+                            renderRemoteTextAction(textAction);
+                        } else {
+                            renderRemoteRemoveTextActions(textAction);
+                        }
+                    }
+                }
+
+                System.out.println("Canvas rebuild success, rebuild: " + actions.size() + " actions");
+            }
+        } catch (Exception e) {
+            System.err.println("Error: Canvas rebuild failed" + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
 }

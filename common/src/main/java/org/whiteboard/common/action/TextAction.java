@@ -6,7 +6,6 @@ import org.whiteboard.common.Point;
 import org.whiteboard.common.TextElement;
 
 import java.io.Serial;
-import java.time.Instant;
 
 public class TextAction extends Action {
     @Serial
@@ -37,15 +36,13 @@ public class TextAction extends Action {
     }
 
     /**
-     * @param actionId  unique identifier for this action
      * @param username  the user who generated this action
-     * @param timestamp time when the action was created
      * @param text      text to be drawn
      * @param position  position of the text on the whiteboard
      * @param scale     scale of the text
      */
-    public TextAction(long actionId, String username, Instant timestamp, String text, Point position, Double scale, String color, TextType type, double minX, double minY, double width, double height) {
-        super(actionId, username, timestamp);
+    public TextAction(String username, String text, Point position, Double scale, String color, TextType type, double minX, double minY, double width, double height) {
+        super(username);
         this.text = text;
         this.position = position;
         this.scale = scale;
@@ -57,8 +54,8 @@ public class TextAction extends Action {
         this.height = height;
     }
 
-    public TextAction(long actionId, String username, Instant timestamp, TextType type, TextElement textElement) {
-        super(actionId, username, timestamp);
+    public TextAction(String username, TextType type, TextElement textElement) {
+        super(username);
         this.text = textElement.text();
         this.position = new Point(textElement.x(), textElement.y());
         this.scale = textElement.scale();

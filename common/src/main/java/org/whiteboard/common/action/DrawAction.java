@@ -3,7 +3,6 @@ package org.whiteboard.common.action;
 import org.whiteboard.common.Point;
 
 import java.io.Serial;
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -30,24 +29,20 @@ public final class DrawAction extends Action {
     private final double strokeWidth;
 
     /**
-     * @param actionId    unique action id
      * @param username    creator username
-     * @param timestamp   creation time
      * @param shapeType   type of shape drawn
      * @param points      list of points defining the shape
      * @param color       stroke color in hex (e.g. "#FF0000")
      * @param strokeWidth width of the stroke in pixels
      */
     public DrawAction(
-            long actionId,
             String username,
-            Instant timestamp,
             ShapeType shapeType,
             List<Point> points,
             String color,
             double strokeWidth
     ) {
-        super(actionId, username, timestamp);
+        super(username);
         this.shapeType = shapeType;
         this.points = List.copyOf(points);
         this.color = color;

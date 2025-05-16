@@ -3,7 +3,6 @@ package org.whiteboard.common.action;
 import org.whiteboard.common.Point;
 
 import java.io.Serial;
-import java.time.Instant;
 import java.util.List;
 
 /**
@@ -17,20 +16,16 @@ public final class EraseAction extends Action {
     private final double eraserSize;
 
     /**
-     * @param actionId   unique action id
      * @param username   creator username
-     * @param timestamp  creation time
      * @param erasePath  list of points that were erased
      * @param eraserSize diameter of the eraser in pixels
      */
     public EraseAction(
-            long actionId,
             String username,
-            Instant timestamp,
             List<Point> erasePath,
             double eraserSize
     ) {
-        super(actionId, username, timestamp);
+        super(username);
         this.erasePath = List.copyOf(erasePath);
         this.eraserSize = eraserSize;
     }
