@@ -194,6 +194,11 @@ public class WhiteboardClient implements IClientCallback {
     public void onServerShutdown(String reason) throws RemoteException {
         System.out.println("Received server shutdown notification: " + reason);
         // Trigger client-side cleanup, similar to disconnect but without calling the server
+        Platform.runLater(() -> {
+            ConnectionManager connectionManager = ConnectionManager.getInstance();
+            connectionManager.getChatController().receiveMessage("Warning! ", "Server shutdown");
+            connectionManager.getMainController().disable();
+        });
         cleanupLocalResources();
     }
 
@@ -201,8 +206,11 @@ public class WhiteboardClient implements IClientCallback {
     public void onSyncWhiteboard(String canvasData) throws RemoteException {
         Platform.runLater(() -> {
             CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
-
-            ctrl.importCanvas(canvasData);
+            if (!canvasData.isEmpty()) {
+                ctrl.importCanvas(canvasData);
+            } else {
+                ctrl.clearCanvas();
+            }
         });
     }
 
@@ -213,6 +221,26 @@ public class WhiteboardClient implements IClientCallback {
             UsersController utrl = ConnectionManager.getInstance().getUsersController();
             if (utrl != null) {
                 utrl.askUserJoin(username);
+            }
+        });
+    }
+
+    @Override
+    public void blockCanvas() throws RemoteException {
+        Platform.runLater(() -> {
+            CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+            if (ctrl != null) {
+                ctrl.blockCanvas();
+            }
+        });
+    }
+
+    @Override
+    public void unblockCanvas() throws RemoteException {
+        Platform.runLater(() -> {
+            CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+            if (ctrl != null) {
+                ctrl.unblockCanvas();
             }
         });
     }

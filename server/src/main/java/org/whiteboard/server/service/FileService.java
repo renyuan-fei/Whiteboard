@@ -2,7 +2,9 @@ package org.whiteboard.server.service;
 
 import org.whiteboard.common.action.Action;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -64,24 +66,6 @@ public class FileService extends Service {
     public void importCanvas(String username, String canvasData) throws RemoteException {
         assertRegistered(username);
 
-        try {
-            byte[] data = Base64.getDecoder().decode(canvasData);
-            try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
-                 ObjectInputStream ois = new ObjectInputStream(bis)) {
-
-                @SuppressWarnings("unchecked")
-                List<Action> importedActions = (List<Action>) ois.readObject();
-
-                synchronized (actionHistory) {
-                    actionHistory.clear();
-                    actionHistory.addAll(importedActions);
-                }
-
-                System.out.println("Canvas imported successfully by user: " + username);
-            }
-        } catch (IOException | ClassNotFoundException ex) {
-            throw new RemoteException("ERROR: Failed to import canvas data", ex);
-        }
 
     }
 

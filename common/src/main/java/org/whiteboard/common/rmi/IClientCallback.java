@@ -82,4 +82,18 @@ public interface IClientCallback extends Remote {
      * @throws RemoteException on network error
      */
     void onAskUserJoin(String username) throws RemoteException;
+
+    /**
+     * block canvas
+     *
+     * @throws RemoteException on network error
+     */
+    void blockCanvas() throws RemoteException;
+
+    /**
+     * unblock canvas
+     *
+     * @throws RemoteException on network error
+     */
+    void unblockCanvas() throws RemoteException;
 }

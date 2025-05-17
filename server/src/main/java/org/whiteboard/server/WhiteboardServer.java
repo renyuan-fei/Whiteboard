@@ -146,7 +146,6 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
     public void broadcastAction(String username, Action action) throws RemoteException {
         // file service store action in canvas storage
         fileService.addAction(action);
-
         whiteboardService.broadcastAction(username, action);
     }
 
@@ -171,6 +170,22 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
 
     }
 
+    @Override
+    public void clearCanva(boolean isClose) throws RemoteException {
+        fileService.cleanData();
+        for (Map.Entry<String, IClientCallback> entry : userService.getClients().entrySet()) {
+            IClientCallback client = entry.getValue();
+            client.onSyncWhiteboard("");
+            if (isClose) {
+                client.blockCanvas();
+                client.onSendMessage("System: ", "Canvas has been closed by admin,\n" +
+                        "Please waiting for admin open a new canvas");
+            } else {
+                client.unblockCanvas();
+                client.onSendMessage("System: ", "Admin create a new canvas");
+            }
+        }
+    }
 
     // TODO : implement importCanvas
 

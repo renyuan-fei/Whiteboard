@@ -17,5 +17,7 @@
   - [x] Chat
   - [ ] Open
   - [ ] Save
-  - [ ] Save as (Image, PDF etc.)
+  - [x] New
+  - [x] Close
+  - [x] Save as (Image, PDF etc.)
   - [x] Kick user

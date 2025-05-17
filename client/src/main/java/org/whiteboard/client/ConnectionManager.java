@@ -213,6 +213,14 @@ public class ConnectionManager {
         return performRemoteCall("kick user " + targetUsername, () -> server.kickUser(currentUser, targetUsername, "You are be kicked by Admin"));
     }
 
+    public CompletableFuture<Void> closeCanvas() {
+        return performRemoteCall("close canvas", () -> server.clearCanva(true));
+    }
+
+    public CompletableFuture<Void> newCanvas() {
+        return performRemoteCall("new canvas", () -> server.clearCanva(false));
+    }
+
     /**
      * Shuts down the network executor service. Call this when the application exits.
      */

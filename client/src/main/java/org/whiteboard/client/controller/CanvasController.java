@@ -1,16 +1,19 @@
 package org.whiteboard.client.controller;
 
+import javafx.embed.swing.SwingFXUtils;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Cursor;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.ColorPicker;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
@@ -26,7 +29,11 @@ import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
 import org.whiteboard.common.action.TextAction;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -694,4 +701,51 @@ public class CanvasController {
         }
     }
 
+    private String getDownloadDirectory() {
+        String userHome = System.getProperty("user.home");
+        String os = System.getProperty("os.name").toLowerCase();
+
+        if (os.contains("win")) {
+            return userHome + "\\Downloads";
+        } else if (os.contains("mac") || os.contains("nix") || os.contains("nux")) {
+            return userHome + "/Downloads";
+        } else {
+            // fallback
+            return userHome;
+        }
+    }
+
+    public void exportCanvasAsImage(String filename, String type) throws IOException {
+        String downloadDir = getDownloadDirectory();
+        File outputFile = new File(downloadDir, filename);
+
+        WritableImage image = new WritableImage((int) canvas.getWidth(), (int) canvas.getHeight());
+        canvas.snapshot(new SnapshotParameters(), image);
+
+        BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+        try {
+            ImageIO.write(bufferedImage, type, outputFile);
+            System.out.println("Saved to: " + outputFile.getAbsolutePath());
+        } catch (IOException e) {
+            System.out.println("Error: Fail to save canvas as " + type);
+        }
+    }
+
+    public void newCanvas() {
+
+    }
+
+    public void clearCanvas() {
+        gc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+    }
+
+    public void blockCanvas() {
+        canvas.setDisable(true);
+        connectionManager.getMainController().setLabelText("Canvas is closed");
+    }
+
+    public void unblockCanvas() {
+        canvas.setDisable(false);
+        connectionManager.getMainController().hideLabelText();
+    }
 }

@@ -17,8 +17,19 @@ public interface IWhiteboardServer extends Remote {
      */
     void broadcastAction(String username, Action action) throws RemoteException;
 
+    /**
+     * accept user let it take from waiting list to a user list
+     *
+     * @param username username
+     * @throws RemoteException on network error
+     */
     void acceptUserJoin(String username) throws RemoteException;
 
+    /**
+     * refuse user and disconnect connect
+     * @param username username
+     * @throws RemoteException on network error
+     */
     void refuseUserJoin(String username) throws RemoteException;
 
     /**
@@ -57,4 +68,10 @@ public interface IWhiteboardServer extends Remote {
      */
     void kickUser(String senderName, String targetUsername, String message) throws RemoteException;
 
+    /**
+     * clear canvas
+     *
+     * @throws RemoteException on network error
+     */
+    void clearCanva(boolean isClose) throws RemoteException;
 }

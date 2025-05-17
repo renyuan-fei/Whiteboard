@@ -9,8 +9,11 @@
         <Menu fx:id="menuFile" disable="true" mnemonicParsing="false" text="File" visible="false">
             <MenuItem fx:id="fileNew" mnemonicParsing="false" text="New"/>
             <MenuItem fx:id="fileOpen" mnemonicParsing="false" text="Open"/>
+            <Menu mnemonicParsing="false" text="SaveAs">
+                <MenuItem fx:id="fileSaveAsPNG" mnemonicParsing="false" text="Save as png"/>
+                <MenuItem fx:id="fileSaveAsJPG" mnemonicParsing="false" text="Save as jpg"/>
+            </Menu>
             <MenuItem fx:id="fileSave" mnemonicParsing="false" text="Save"/>
-            <MenuItem fx:id="fileSaveAs" mnemonicParsing="false" text="SaveAs"/>
             <MenuItem fx:id="fileClose" mnemonicParsing="false" text="Close"/>
         </Menu>
     </MenuBar>
