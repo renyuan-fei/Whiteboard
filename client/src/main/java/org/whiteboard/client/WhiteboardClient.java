@@ -3,6 +3,7 @@ package org.whiteboard.client;
 import javafx.application.Platform;
 import org.whiteboard.client.controller.CanvasController;
 import org.whiteboard.client.controller.ChatController;
+import org.whiteboard.client.controller.MainController;
 import org.whiteboard.client.controller.UsersController;
 import org.whiteboard.common.action.Action;
 import org.whiteboard.common.action.DrawAction;
@@ -23,18 +24,6 @@ public class WhiteboardClient implements IClientCallback {
     private final IWhiteboardServer whiteboardServer;
     private final String username;
 
-
-    /**
-     * Create a new client instance.
-     *
-     * @param host     the host name of the server
-     * @param port     the port number of the server
-     * @param username the username
-     * @return a new client instance
-     */
-    public static WhiteboardClient createClient(String host, int port, String username) throws RemoteException {
-        return new WhiteboardClient(false, host, port, username);
-    }
 
     public static WhiteboardClient createClient(boolean isAdmin, String host, int port, String username) throws RemoteException {
         return new WhiteboardClient(isAdmin, host, port, username);
@@ -145,12 +134,18 @@ public class WhiteboardClient implements IClientCallback {
     }
 
     @Override
-    public void onInitialUserList(List<String> usernames) throws RemoteException {
+    public void onInitialClientState(List<String> usernames, boolean isAdmin) throws RemoteException {
         Platform.runLater(() -> {
             UsersController utrl = ConnectionManager.getInstance().getUsersController();
 
             if (utrl != null) {
-                utrl.initialUserList(usernames);
+                utrl.initialUserList(usernames, isAdmin);
+            }
+
+            MainController mtrl = ConnectionManager.getInstance().getMainController();
+
+            if (mtrl != null) {
+                mtrl.initialClient(isAdmin);
             }
         });
     }
@@ -186,9 +181,13 @@ public class WhiteboardClient implements IClientCallback {
             if (ctrl != null) {
                 ctrl.receiveMessage("Warning! ", message);
             }
-        });
 
-        //TODO disable
+            MainController mtrl = ConnectionManager.getInstance().getMainController();
+
+            if (ctrl != null) {
+                mtrl.disable();
+            }
+        });
     }
 
     @Override
@@ -204,6 +203,17 @@ public class WhiteboardClient implements IClientCallback {
             CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
 
             ctrl.importCanvas(canvasData);
+        });
+    }
+
+    @Override
+    public void onAskUserJoin(String username) throws RemoteException {
+        Platform.runLater(() -> {
+            // ask admin
+            UsersController utrl = ConnectionManager.getInstance().getUsersController();
+            if (utrl != null) {
+                utrl.askUserJoin(username);
+            }
         });
     }
 

@@ -3,8 +3,12 @@ package org.whiteboard.client.controller;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.layout.HBox;
 import org.whiteboard.client.ConnectionManager;
 
 import java.util.List;
@@ -15,16 +19,35 @@ public class UsersController {
     private Button kickUserButton;
 
     @FXML
-    private ListView<String> userList;
+    private ListView<Node> userList;
 
     private final ConnectionManager connectionManager = ConnectionManager.getInstance();
 
     @FXML
     public void initialize() {
-        // inject the canvas controller into the connection manager
-        ConnectionManager.getInstance().setUsersController(this);
+        // inject the controller into the connection manager
+        connectionManager.setUsersController(this);
 
-        kickUserButton.setOnAction(e -> kickUser(userList.getSelectionModel().getSelectedItem()));
+        kickUserButton.setOnAction(e -> {
+            Node selected = userList.getSelectionModel().getSelectedItem();
+            if (selected instanceof HBox) {
+                Label lbl = (Label) ((HBox) selected).getChildren().getFirst();
+                kickUser(lbl.getText());
+            }
+        });
+
+        // default cell factory to render nodes directly
+        userList.setCellFactory(lv -> new ListCell<>() {
+            @Override
+            protected void updateItem(Node item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setGraphic(null);
+                } else {
+                    setGraphic(item);
+                }
+            }
+        });
     }
 
     private void kickUser(String username) {
@@ -37,43 +60,20 @@ public class UsersController {
         connectionManager.kickUser(username)
                 .exceptionally(ex -> {
                     System.err.println("Error: Fail to kick user: " + ex.getMessage());
-
                     return null;
                 });
     }
 
-    public void initialUserList(List<String> usernames) {
-        if (connectionManager.isAdmin()) {
-            kickUserButton.setVisible(true);
-
-            // Disable admin in admin's user list
-            userList.setCellFactory(lv -> new javafx.scene.control.ListCell<String>() {
-                @Override
-                public void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-
-                    if (empty || item == null) {
-                        setText(null);
-                        setDisable(false);
-                    } else {
-                        setText(item);
-
-                        boolean isAdminUser = userList.getItems().indexOf(item) == 0;
-
-                        setDisable(isAdminUser);
-
-                        if (isAdminUser) {
-                            setStyle("-fx-background-color: #f0f0f0; -fx-text-fill: #999999;");
-                        } else {
-                            setStyle("");
-                        }
-                    }
-                }
-            });
-
+    public void initialUserList(List<String> usernames, boolean isAdmin) {
+        ObservableList<Node> items = FXCollections.observableArrayList();
+        for (String user : usernames) {
+            items.add(createUserCell(user));
         }
-        ObservableList<String> names = FXCollections.observableArrayList(usernames);
-        userList.setItems(names);
+        userList.setItems(items);
+
+        if (isAdmin) {
+            kickUserButton.setVisible(true);
+        }
     }
 
     public void addNewUser(String username) {
@@ -81,24 +81,60 @@ public class UsersController {
             return;
         }
 
-        // Get the items from the ListView and cast to the correct type
-        ObservableList<String> items = userList.getItems();
-
-        // Add the new username if it doesn't already exist
-        if (!items.contains(username)) {
-            items.add(username);
-        }
+        userList.getItems().add(createUserCell(username));
     }
 
     public void removeUser(String username) {
+        userList.getItems().removeIf(node -> {
+            if (node instanceof HBox) {
+                Label lbl = (Label) ((HBox) node).getChildren().getFirst();
+                return username.equals(lbl.getText());
+            }
+            return false;
+        });
+    }
+
+    public void askUserJoin(String username) {
         if (username == null || username.isEmpty()) {
             return;
         }
+        HBox cell = createUserCellWithActions(username);
+        userList.getItems().add(cell);
+    }
 
-        // Get the items from the ListView and cast to the correct type
-        ObservableList<String> items = userList.getItems();
+    private HBox createUserCell(String username) {
+        Label nameLabel = new Label(username);
+        return new HBox(8, nameLabel);
+    }
 
-        // Remove the username if it exists
-        items.remove(username);
+    private HBox createUserCellWithActions(String username) {
+        Label nameLabel = new Label(username);
+        Button acceptBtn = new Button("Accept");
+        Button refuseBtn = new Button("Refuse");
+
+        acceptBtn.setOnAction(e -> handleAccept(username));
+        refuseBtn.setOnAction(e -> handleRefuse(username));
+
+        return new HBox(8, nameLabel, acceptBtn, refuseBtn);
+    }
+
+    private void handleAccept(String username) {
+        System.out.println("Accepted: " + username);
+        connectionManager.acceptUserJoin(username)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Fail to accept user join: " + ex.getMessage());
+                    return null;
+                });
+        removeUser(username);
+    }
+
+    private void handleRefuse(String username) {
+        System.out.println("Refused: " + username);
+        connectionManager.refuseUserJoin(username)
+                .exceptionally(ex -> {
+                    System.err.println("Error: Fail to refuse user join: " + ex.getMessage());
+                    return null;
+                });
+        removeUser(username);
     }
 }

@@ -8,11 +8,6 @@ import javafx.scene.text.TextFlow;
 import org.whiteboard.client.ConnectionManager;
 
 public class ChatController {
-
-
-    @FXML
-    private javafx.scene.control.ScrollPane scrollPane;
-
     @FXML
     private TextFlow textFlow;
 
@@ -26,7 +21,7 @@ public class ChatController {
 
     @FXML
     public void initialize() {
-        // inject the canvas controller into the connection manager
+        // inject the controller into the connection manager
         ConnectionManager.getInstance().setChatController(this);
 
         // Set up action for the send button

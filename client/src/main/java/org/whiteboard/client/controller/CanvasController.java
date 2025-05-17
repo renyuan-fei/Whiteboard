@@ -83,7 +83,7 @@ public class CanvasController {
 
     @FXML
     public void initialize() {
-        // inject the canvas controller into the connection manager
+        // inject the controller into the connection manager
         ConnectionManager.getInstance().setCanvasController(this);
 
         // setup canvas
@@ -183,9 +183,8 @@ public class CanvasController {
 
         });
 
-        canvas.addEventHandler(MouseEvent.MOUSE_EXITED, e -> {
-            pgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
-        });
+        canvas.addEventHandler(MouseEvent.MOUSE_EXITED, e ->
+                pgc.clearRect(0, 0, canvas.getWidth(), canvas.getHeight()));
 
 
         // Canvas
@@ -228,7 +227,7 @@ public class CanvasController {
 
                 // otherwise, show the text editor
                 if (e.getClickCount() == 1) {
-                    showTextEditor("", e.getX(), e.getY());
+                    showTextEditor(e.getX(), e.getY());
                 }
             }
         });
@@ -347,10 +346,6 @@ public class CanvasController {
         double size = action.getStrokeWidth();
 
         switch (action.getShapeType()) {
-            case POINT -> {
-                // Draw a point
-                gc.fillRect(startPoint.getX() - size / 2, startPoint.getY() - size / 2, action.getStrokeWidth(), action.getStrokeWidth());
-            }
             case FREEHAND -> {
                 List<Point> pts = action.getPoints();
                 // At least 2 points are needed to draw a line
@@ -358,19 +353,12 @@ public class CanvasController {
                 Point a = pts.get(0), b = pts.get(1);
                 gc.strokeLine(a.getX(), a.getY(), b.getX(), b.getY());
             }
-            case LINE -> {
-                drawLine(startPoint, end, gc);
-            }
-            case RECTANGLE -> {
-                drawRectangle(startPoint, end, gc);
-            }
-            case OVAL -> {
-                drawOval(startPoint, end, gc);
-            }
-            case TRIANGLE -> {
-                System.out.println(action);
-                drawTriangle(startPoint, end, gc);
-            }
+            case POINT ->
+                    gc.fillRect(startPoint.getX() - size / 2, startPoint.getY() - size / 2, action.getStrokeWidth(), action.getStrokeWidth());
+            case LINE -> drawLine(startPoint, end, gc);
+            case RECTANGLE -> drawRectangle(startPoint, end, gc);
+            case OVAL -> drawOval(startPoint, end, gc);
+            case TRIANGLE -> drawTriangle(startPoint, end, gc);
         }
     }
 
@@ -479,13 +467,13 @@ public class CanvasController {
         );
     }
 
-    private void showTextEditor(String initText, double x, double y) {
+    private void showTextEditor(double x, double y) {
 
         if (editingField != null) {
             hideTextEditor();
         }
 
-        editingField = new TextField(initText);
+        editingField = new TextField("");
 
         double fontHeight = computeTextHeight(slider.getValue());
 
@@ -494,7 +482,7 @@ public class CanvasController {
         editingField.setLayoutY(y - fontHeight / 2);
 
 
-        editingField.setPrefColumnCount(Math.max(10, initText.length()));
+        editingField.setPrefColumnCount(10);
         editingField.setFont(Font.font(slider.getValue() * 4));
         editingField.setPadding(new Insets(0));
         editingField.setStyle("-fx-text-fill: " + toCssColor(colorPicker.getValue()) + "; -fx-padding: 0;");
@@ -660,14 +648,7 @@ public class CanvasController {
         }
     }
 
-    // Test for text bounds
-    private void drawBounds(TextElement te) {
-        gc.setLineWidth(1);
-        gc.setStroke(Color.RED);
-        gc.strokeRect(te.bounds().getMinX(), te.bounds().getMinY(), te.bounds().getWidth(), te.bounds().getHeight());
-    }
-
-    // TODO : implement import canvas
+    // import canvas
     public void importCanvas(String canvasData) {
         try {
             // Rebuild canvas
@@ -675,7 +656,6 @@ public class CanvasController {
 
         } catch (Exception e) {
             System.err.println("Error: Fail to import data" + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -684,7 +664,6 @@ public class CanvasController {
             byte[] data = Base64.getDecoder().decode(canvasData);
             try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
                  ObjectInputStream ois = new ObjectInputStream(bis)) {
-
 
                 List<Action> actions = (List<Action>) ois.readObject();
 
@@ -712,7 +691,6 @@ public class CanvasController {
             }
         } catch (Exception e) {
             System.err.println("Error: Canvas rebuild failed" + e.getMessage());
-            e.printStackTrace();
         }
     }
 

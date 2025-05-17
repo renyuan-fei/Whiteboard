@@ -2,11 +2,11 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.Pane?>
-<Pane fx:id="mainPane" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity"
-      prefHeight="830.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="org.whiteboard.client.controller.MainController">
+<Pane fx:id="mainPane" disable="true" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity"
+      minWidth="-Infinity" prefHeight="830.0" prefWidth="1200.0" xmlns="http://javafx.com/javafx/23.0.1"
+      xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.whiteboard.client.controller.MainController">
     <MenuBar fx:id="menuBar" prefHeight="30.0" prefWidth="1700.0">
-        <Menu fx:id="menuFile" mnemonicParsing="false" text="File">
+        <Menu fx:id="menuFile" disable="true" mnemonicParsing="false" text="File" visible="false">
             <MenuItem fx:id="fileNew" mnemonicParsing="false" text="New"/>
             <MenuItem fx:id="fileOpen" mnemonicParsing="false" text="Open"/>
             <MenuItem fx:id="fileSave" mnemonicParsing="false" text="Save"/>
@@ -14,7 +14,9 @@
             <MenuItem fx:id="fileClose" mnemonicParsing="false" text="Close"/>
         </Menu>
     </MenuBar>
-    <fx:include source="canvas-view.fxml" layoutY="28.0"/>
-    <fx:include source="chat-view.fxml" layoutX="1200" layoutY="29.0"/>
-    <fx:include source="users-view.fxml" layoutX="1500" layoutY="29.0"/>
+    <fx:include layoutY="28.0" source="canvas-view.fxml"/>
+    <fx:include layoutX="1200" layoutY="29.0" source="chat-view.fxml"/>
+    <fx:include layoutX="1500" layoutY="29.0" source="users-view.fxml"/>
+    <Label fx:id="label" alignment="CENTER" contentDisplay="CENTER" layoutX="358.0" layoutY="372.0" prefHeight="87.0"
+           prefWidth="484.0" text="waiting for admin approve"/>
 </Pane>

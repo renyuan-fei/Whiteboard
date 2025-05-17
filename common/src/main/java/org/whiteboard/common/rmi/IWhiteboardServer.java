@@ -4,7 +4,6 @@ import org.whiteboard.common.action.Action;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
 
 /**
  * Remote interface for Whiteboard services.
@@ -17,6 +16,10 @@ public interface IWhiteboardServer extends Remote {
      * @throws RemoteException on network error
      */
     void broadcastAction(String username, Action action) throws RemoteException;
+
+    void acceptUserJoin(String username) throws RemoteException;
+
+    void refuseUserJoin(String username) throws RemoteException;
 
     /**
      * Join the whiteboard session.
@@ -54,11 +57,4 @@ public interface IWhiteboardServer extends Remote {
      */
     void kickUser(String senderName, String targetUsername, String message) throws RemoteException;
 
-    /**
-     * get all usernames from clients
-     *
-     * @return list of usernames
-     * @throws RemoteException on network error
-     */
-    ArrayList<String> getUsers() throws RemoteException;
 }

@@ -9,7 +9,7 @@
   - [x] Shape (Line, Triangle, Rectangle, Oval)
   - [x] Text
   - [x] store canvas and load when user joins
-  - [ ] Manager can decide who can join(alter admin after new connection)
+  - [x] Manager can decide who can join(alter admin after new connection)
   - [x] User list
   - [x] Left
   - [x] Close when admin leaves

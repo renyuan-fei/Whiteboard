@@ -5,13 +5,17 @@ import org.whiteboard.common.rmi.IClientCallback;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class UserService extends Service {
 
     private String Admin = "";
 
+    private final Map<String, IClientCallback> waitingClients;
+
     public UserService(Map<String, IClientCallback> clients) {
         super();
+        waitingClients = new ConcurrentHashMap<>();
         setClients(clients);
     }
 
@@ -27,17 +31,63 @@ public class UserService extends Service {
         return Admin;
     }
 
-    public synchronized void registerClient(String username, IClientCallback callback) throws RemoteException {
+    public void waitingForJoin(String username, IClientCallback callback) throws RemoteException {
+        synchronized (this) {
+            // add user to a waiting list
+            waitingClients.put(username, callback);
+
+            // ask admin within the synchronized block
+            IClientCallback admin = getClients().get(Admin);
+            if (admin != null) {
+                admin.onAskUserJoin(username);
+            } else {
+                System.err.println("Error: Admin client not found when a user is waiting to join.");
+            }
+        }
+    }
+
+    public void userRefuse(String username) throws RemoteException {
+        // init after admin refuse
+        IClientCallback userCallback = waitingClients.get(username);
+        synchronized (this) {
+            this.waitingClients.remove(username);
+        }
+        if (userCallback != null) {
+            userCallback.onKicked("Admin refuse your request");
+        } else {
+            System.err.println("Error: User callback not found for username: " + username + " when trying to join.");
+        }
+    }
+
+    public IClientCallback userJoin(String username) throws RemoteException {
+        // init after admin approve
+        IClientCallback userCallback = waitingClients.get(username);
+        synchronized (this) {
+            this.waitingClients.remove(username);
+        }
+        if (userCallback != null) {
+            registerClient(username, userCallback, false);
+        } else {
+            System.err.println("Error: User callback not found for username: " + username + " when trying to join.");
+        }
+
+        return userCallback;
+    }
+
+    public synchronized void registerClient(String username, IClientCallback callback, boolean isAdmin) throws RemoteException {
         // Check if the client is already registered
         if (getClients().containsKey(username)) {
             System.out.println("Client " + username + " is already registered, unregistering...");
-            unregisterClient(username);
-            System.out.println("Client " + username + " unregistered");
+            throw new RemoteException("Client " + username + " is already registered");
+//            unregisterClient(username);
+//            System.out.println("Client " + username + " unregistered");
         }
-        callback.onInitialUserList(getUsers());
+
+        callback.onInitialClientState(getUsers(), isAdmin);
 
         getClients().put(username, callback);
         System.out.println("Registered client: " + username);
+
         broadcastMessage(username, "has joined the whiteboard");
 
         for (IClientCallback client : getClients().values()) {
@@ -59,16 +109,6 @@ public class UserService extends Service {
 
     public synchronized ArrayList<String> getUsers() {
         return new ArrayList<>(getClients().keySet());
-    }
-
-    public synchronized void sendMessage(String username, String message) throws RemoteException {
-        assertRegistered(username);
-        IClientCallback client = getClients().get(username);
-        if (client != null) {
-            client.onSendMessage(username, message);
-        } else {
-            System.out.println("Client " + username + " not found");
-        }
     }
 
     public synchronized void broadcastMessage(String username, String message) throws RemoteException {

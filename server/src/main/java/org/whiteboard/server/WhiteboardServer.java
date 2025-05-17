@@ -22,7 +22,7 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
     private final WhiteboardService whiteboardService;
     private final FileService fileService;
     private final UserService userService;
-    private transient Registry registry;
+    private final transient Registry registry;
 
 
     /**
@@ -82,25 +82,16 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
         this.userService = userService;
     }
 
+    @Override
+    public void refuseUserJoin(String username) throws RemoteException {
+        userService.userRefuse(username);
+    }
 
-    /**
-     * Constructor for the server.
-     *
-     * @param whiteboardService the whiteboard service
-     * @param fileService       the file service
-     * @param userService       the user service
-     * @throws RemoteException if an error occurs during remote object creation
-     */
-    protected WhiteboardServer(
-            WhiteboardService whiteboardService,
-            FileService fileService,
-            UserService userService
-    ) throws RemoteException {
-        super();
-
-        this.fileService = fileService;
-        this.whiteboardService = whiteboardService;
-        this.userService = userService;
+    @Override
+    public void acceptUserJoin(String username) throws RemoteException {
+        IClientCallback userCallback = userService.userJoin(username);
+        String canvasData = fileService.getCanvasData();
+        userCallback.onSyncWhiteboard(canvasData);
     }
 
     @Override
@@ -110,20 +101,22 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
         if (isAdmin && !userService.hasAdmin()) {
             userService.setAdmin(username);
             System.out.println("Admin '" + username + "' has create a new whiteboard");
-            // TODO create canvas storage
+
+            userService.registerClient(username, callback, true);
+
+            // file service get current canvas storage
+            String canvasData = fileService.getCanvasData();
+
+            // whiteboard service import canvas storage
+            callback.onSyncWhiteboard(canvasData);
         } else if (isAdmin && userService.hasAdmin()) {
             throw new RemoteException("Only one admin can be registered at a time");
         } else if (!isAdmin && !userService.hasAdmin()) {
             throw new RemoteException("No admin registered yet, please register as admin first");
+        } else {
+            // other users will add to a waiting list
+            userService.waitingForJoin(username, callback);
         }
-
-        userService.registerClient(username, callback);
-
-        // file service get current canvas storage
-        String canvasData = fileService.getCanvasData();
-
-        // whiteboard service import canvas storage
-        callback.onSyncWhiteboard(canvasData);
     }
 
     @Override
@@ -176,11 +169,6 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
             throw new RemoteException("User '" + senderName + "' does not have permission to kick users (not admin).");
         }
 
-    }
-
-    @Override
-    public ArrayList<String> getUsers() throws RemoteException {
-        return userService.getUsers();
     }
 
 

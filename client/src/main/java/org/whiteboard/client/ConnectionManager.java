@@ -2,6 +2,7 @@ package org.whiteboard.client;
 
 import org.whiteboard.client.controller.CanvasController;
 import org.whiteboard.client.controller.ChatController;
+import org.whiteboard.client.controller.MainController;
 import org.whiteboard.client.controller.UsersController;
 import org.whiteboard.common.action.DrawAction;
 import org.whiteboard.common.action.EraseAction;
@@ -24,6 +25,8 @@ public class ConnectionManager {
     private volatile boolean connected;
     private IWhiteboardServer server;
     private IClientCallback callback;
+
+    private MainController mainController;
 
     private CanvasController canvasController;
 
@@ -68,6 +71,14 @@ public class ConnectionManager {
         System.out.println("ConnectionManager initialized for user: " + username);
     }
 
+    public void setMainController(MainController controller) {
+        this.mainController = controller;
+    }
+
+    public MainController getMainController() {
+        return this.mainController;
+    }
+
     public void setUsersController(UsersController controller) {
         this.usersController = controller;
     }
@@ -92,14 +103,6 @@ public class ConnectionManager {
         return canvasController;
     }
 
-    public IWhiteboardServer getServer() {
-        return server;
-    }
-
-    public IClientCallback getCallback() {
-        return callback;
-    }
-
     public void setConnected(boolean connected) {
         this.connected = connected;
     }
@@ -110,10 +113,6 @@ public class ConnectionManager {
 
     public String getUsername() {
         return username;
-    }
-
-    public boolean isAdmin() {
-        return isAdmin;
     }
 
     /**
@@ -154,6 +153,13 @@ public class ConnectionManager {
         void execute() throws RemoteException;
     }
 
+    public CompletableFuture<Void> acceptUserJoin(String username) {
+        return performRemoteCall("accept user join", () -> server.acceptUserJoin(username));
+    }
+
+    public CompletableFuture<Void> refuseUserJoin(String username) {
+        return performRemoteCall("refuse user join", () -> server.refuseUserJoin(username));
+    }
 
     /**
      * Sends a DrawAction asynchronously.

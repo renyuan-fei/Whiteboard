@@ -38,7 +38,7 @@ public interface IClientCallback extends Remote {
      * @param username new attend username
      * @throws RemoteException on network error
      */
-    void onInitialUserList(List<String> username) throws RemoteException;
+    void onInitialClientState(List<String> username, boolean isAdmin) throws RemoteException;
 
     /**
      * @param username new attend username
@@ -74,4 +74,12 @@ public interface IClientCallback extends Remote {
      * @throws RemoteException on network error
      */
     void onSyncWhiteboard(String canvasData) throws RemoteException;
+
+    /**
+     * Ask admin doese user can join the whiteboard
+     *
+     * @param username username
+     * @throws RemoteException on network error
+     */
+    void onAskUserJoin(String username) throws RemoteException;
 }
