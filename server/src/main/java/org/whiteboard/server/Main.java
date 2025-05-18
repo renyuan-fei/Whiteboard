@@ -47,7 +47,6 @@ public class Main {
 
         } catch (Exception ex) {
             System.err.println("FATAL: Error during server startup: " + ex.getMessage());
-            ex.printStackTrace();
 
             // Exit if server failed to start
             System.exit(1);

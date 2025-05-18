@@ -187,14 +187,34 @@ public class WhiteboardServer extends UnicastRemoteObject implements IWhiteboard
         }
     }
 
-    // TODO : implement importCanvas
+    // Import canvas
+    @Override
+    public void importCanvas(String canvasData) throws RemoteException {
+        fileService.cleanData();
+        try {
+            for (Map.Entry<String, IClientCallback> entry : userService.getClients().entrySet()) {
+                IClientCallback client = entry.getValue();
+                try {
+                    client.blockCanvas();
+                    fileService.importCanvas(canvasData);
+                    client.onSyncWhiteboard(canvasData);
+                    client.onSendMessage("System: ", "Admin import a canvas");
+                } catch (Exception e) {
+                    throw new RemoteException("Error: Failed to import canvas: " + e.getMessage());
+                } finally {
+                    client.unblockCanvas();
+                }
+            }
+        } catch (Exception e) {
+            throw new RemoteException("Error: Failed to import canvas: " + e.getMessage());
+        }
+    }
 
-    // TODO : implement exportCanvas
-
-    // TODO : implement newCanvas
-
-    // TODO : implement saveCanvas
-
+    // Export canvas
+    @Override
+    public String exportCanvas() throws RemoteException {
+        return fileService.getCanvasData();
+    }
 
     /**
      * Notifies all connected clients that the server is shutting down.

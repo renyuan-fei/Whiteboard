@@ -1,0 +1,1 @@
+/Users/frank/Library/Java/JavaVirtualMachines/liberica-full-21.0.6/bin/java -jar ./target/client-1.0-SNAPSHOT.jar JoinWhiteBoard 127.0.0.1 32500 user1

@@ -74,4 +74,8 @@ public interface IWhiteboardServer extends Remote {
      * @throws RemoteException on network error
      */
     void clearCanva(boolean isClose) throws RemoteException;
+
+    void importCanvas(String canvasData) throws RemoteException;
+
+    String exportCanvas() throws RemoteException;
 }

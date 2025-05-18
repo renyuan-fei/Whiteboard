@@ -672,6 +672,7 @@ public class CanvasController {
             try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
                  ObjectInputStream ois = new ObjectInputStream(bis)) {
 
+                @SuppressWarnings("unchecked")
                 List<Action> actions = (List<Action>) ois.readObject();
 
                 // clean the current canvas
@@ -701,22 +702,8 @@ public class CanvasController {
         }
     }
 
-    private String getDownloadDirectory() {
-        String userHome = System.getProperty("user.home");
-        String os = System.getProperty("os.name").toLowerCase();
 
-        if (os.contains("win")) {
-            return userHome + "\\Downloads";
-        } else if (os.contains("mac") || os.contains("nix") || os.contains("nux")) {
-            return userHome + "/Downloads";
-        } else {
-            // fallback
-            return userHome;
-        }
-    }
-
-    public void exportCanvasAsImage(String filename, String type) throws IOException {
-        String downloadDir = getDownloadDirectory();
+    public void exportCanvasAsImage(String filename, String downloadDir, String type) throws IOException {
         File outputFile = new File(downloadDir, filename);
 
         WritableImage image = new WritableImage((int) canvas.getWidth(), (int) canvas.getHeight());
@@ -729,10 +716,6 @@ public class CanvasController {
         } catch (IOException e) {
             System.out.println("Error: Fail to save canvas as " + type);
         }
-    }
-
-    public void newCanvas() {
-
     }
 
     public void clearCanvas() {

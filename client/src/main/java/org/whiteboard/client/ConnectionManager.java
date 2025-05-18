@@ -221,6 +221,21 @@ public class ConnectionManager {
         return performRemoteCall("new canvas", () -> server.clearCanva(false));
     }
 
+    public CompletableFuture<Void> openCanvas(String canvasData) {
+        return performRemoteCall("open canvas", () -> server.importCanvas(canvasData));
+    }
+
+    public CompletableFuture<String> saveCanvas() {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                return server.exportCanvas();
+            } catch (RemoteException ex) {
+                System.err.println("RMI Error during [save canvas]: " + ex.getMessage());
+                throw new RuntimeException(ex);
+            }
+        }, networkExecutor);
+    }
+
     /**
      * Shuts down the network executor service. Call this when the application exits.
      */

@@ -83,8 +83,8 @@ public class WhiteboardApplication extends javafx.application.Application {
 
         // App start
         stage.addEventHandler(WindowEvent.WINDOW_SHOWN, evt -> {
-            String host = "127.0.0.1";
-            int port = 3000;
+            String host = this.host;
+            int port = this.port;
 //            String username = UUID.randomUUID().toString().substring(0, 8); // Example
             System.out.println("Attempting connection to " + host + ":" + port + " as " + username);
             BackgroundWorker.run(host, port, username, isAdmin);

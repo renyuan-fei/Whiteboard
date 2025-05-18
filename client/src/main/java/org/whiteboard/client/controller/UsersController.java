@@ -46,6 +46,11 @@ public class UsersController {
                 } else {
                     setGraphic(item);
                 }
+                // Disable only the first list cell
+                boolean disabled = !empty && getIndex() == 0;
+                setDisable(disabled);
+                setMouseTransparent(disabled);
+                setFocusTraversable(!disabled);
             }
         });
     }
@@ -70,7 +75,10 @@ public class UsersController {
             items.add(createUserCell(user));
         }
         userList.setItems(items);
-
+        // Disable the first item in the list
+        if (!items.isEmpty()) {
+            items.get(0).setDisable(true);
+        }
         if (isAdmin) {
             kickUserButton.setVisible(true);
         }
@@ -81,7 +89,11 @@ public class UsersController {
             return;
         }
 
-        userList.getItems().add(createUserCell(username));
+        ObservableList<Node> items = userList.getItems();
+        items.add(createUserCell(username));
+        if (items.size() == 1) {
+            items.get(0).setDisable(true);
+        }
     }
 
     public void removeUser(String username) {

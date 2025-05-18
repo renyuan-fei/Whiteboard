@@ -15,8 +15,8 @@
   - [x] Close when admin leaves
 - Advanced
   - [x] Chat
-  - [ ] Open
-  - [ ] Save
+  - [x] Open
+  - [x] Save
   - [x] New
   - [x] Close
   - [x] Save as (Image, PDF etc.)

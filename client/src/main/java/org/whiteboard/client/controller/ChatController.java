@@ -1,5 +1,6 @@
 package org.whiteboard.client.controller;
 
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
@@ -33,7 +34,10 @@ public class ChatController {
 
         // Only send it if a message is not empty
         if (!message.isEmpty()) {
-            textFlow.getChildren().add(new Text(connectionManager.getUsername() + ": " + message + "\n"));
+            Platform.runLater(() -> {
+                textFlow.getChildren().
+                        add(new Text(connectionManager.getUsername() + ": " + message + "\n"));
+            });
 
             connectionManager.sendChatMessage(connectionManager.getUsername(), message)
                     .exceptionally(ex -> {

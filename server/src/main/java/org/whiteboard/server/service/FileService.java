@@ -2,9 +2,7 @@ package org.whiteboard.server.service;
 
 import org.whiteboard.common.action.Action;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -17,11 +15,6 @@ import java.util.List;
 public class FileService extends Service {
 
     private final List<Action> actionHistory = Collections.synchronizedList(new ArrayList<>());
-
-    public enum ExportType {
-        PDF,
-        PNG,
-    }
 
     public FileService() {
         super();
@@ -63,32 +56,33 @@ public class FileService extends Service {
     /**
      * Upload a canvas data and import it to the server.
      */
-    public void importCanvas(String username, String canvasData) throws RemoteException {
-        assertRegistered(username);
+    public void importCanvas(String canvasData) throws RemoteException {
+        if (canvasData == null || canvasData.isEmpty()) {
+            throw new RemoteException("Error: Canvas data is empty");
+        }
+        byte[] data = Base64.getDecoder().decode(canvasData);
+        try (ByteArrayInputStream bis = new ByteArrayInputStream(data);
+             ObjectInputStream ois = new ObjectInputStream(bis)) {
 
+            @SuppressWarnings("unchecked")
+            List<Action> actions = (List<Action>) ois.readObject();
 
+            List<Action> imported = new ArrayList<>();
+            for (Object item : actions) {
+                if (item instanceof Action action) {
+                    imported.add(action);
+                }
+            }
+
+            synchronized (actionHistory) {
+                actionHistory.clear();
+                actionHistory.addAll(imported);
+            }
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RemoteException("Error: Fail to import canvas data", e);
+        }
     }
 
-    /**
-     * Export the canvas to a file.
-     */
-    public void exportCanvas() {
-
-    }
-
-    /**
-     * Export the canvas to a PDF file.
-     */
-    public void exportPDF() {
-
-    }
-
-    /**
-     * Export the canvas to a PNG file.
-     */
-    public void exportPNG() {
-
-    }
 
     public void shutdown() {
         System.out.println("Shutting down FileService...");

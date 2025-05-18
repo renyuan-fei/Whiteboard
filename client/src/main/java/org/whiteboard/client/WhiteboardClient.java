@@ -206,10 +206,9 @@ public class WhiteboardClient implements IClientCallback {
     public void onSyncWhiteboard(String canvasData) throws RemoteException {
         Platform.runLater(() -> {
             CanvasController ctrl = ConnectionManager.getInstance().getCanvasController();
+            ctrl.clearCanvas();
             if (!canvasData.isEmpty()) {
                 ctrl.importCanvas(canvasData);
-            } else {
-                ctrl.clearCanvas();
             }
         });
     }
